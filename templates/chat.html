@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg">
+        <div class="bg-code-blue text-white p-4 rounded-t-lg">
+            <h2 class="text-xl font-bold capitalize">{{ scenario.replace('_', ' ') }} Practice</h2>
+            <p class="text-blue-200 text-sm">Practice your English in this workplace scenario</p>
+        </div>
+        
+        <div id="chat-container" class="h-96 overflow-y-auto p-4 space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="font-semibold text-blue-800 mb-2">🤖 AI Tutor</div>
+                <div id="scenario-intro">Loading scenario...</div>
+            </div>
+        </div>
+        
+        <div class="border-t p-4">
+            <div class="flex space-x-2">
+                <input type="text" 
+                       id="message-input" 
+                       placeholder="Type your message here..."
+                       class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" 
+                        class="bg-code-blue text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition">
+                    Send
+                </button>
+            </div>
+            <!-- Translation Toggle -->
+            <div class="mt-2 flex items-center justify-end">
+                <label class="flex items-center text-sm text-gray-600">
+                    <input type="checkbox" id="auto-translate" class="mr-2 rounded">
+                    Auto-traducir respuestas del AI
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Corrections Panel -->
+    <div id="corrections-panel" class="mt-6 bg-white rounded-xl shadow-xl border border-gray-200 p-6 hidden">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+            <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+                <span class="mr-3">🎯</span>
+                Learning Feedback
+            </h3>
+            <button onclick="document.getElementById('corrections-panel').classList.add('hidden')" 
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="corrections-content" class="space-y-6"></div>
+        <div class="mt-6 pt-4 border-t border-gray-200">
+            <div class="flex items-center justify-center text-sm text-gray-500">
+                <span class="mr-2">💪</span>
+                Keep practicing to improve your technical English!
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const scenario = '{{ scenario }}';
+let chatContainer = document.getElementById('chat-container');
+let messageInput = document.getElementById('message-input');
+let correctionsPanel = document.getElementById('corrections-panel');
+
+// Enhanced translation cache to avoid repeated API calls
+const translationCache = new Map();
+
+// Initialize chat with scenario
+window.onload = function() {
+    const scenarioIntros = {
+        'daily_standup': "Good morning! Let's start our daily standup. Can you tell me what you worked on yesterday?",
+        'code_review': "I've reviewed your pull request. The code looks good overall, but I have a few questions. Can you explain the logic in the authentication module?",
+        'technical_interview': "Welcome! I'm excited to learn about your background. Can you tell me about a challenging technical problem you've solved recently?",
+        'debugging_session': "We have a critical bug in production - users can't log in. What's your first step in investigating this issue?",
+        'project_planning': "We need to plan the new user dashboard feature. What do you think should be our main priorities?",
+        'client_meeting': "Thank you for meeting with us today. We'd like to discuss your software requirements. What's the main challenge you're trying to solve?",
+        'architecture_discussion': "Let's discuss the architecture for our new microservices. What patterns do you think we should consider?",
+        'deployment_issue': "The deployment failed and the site is down. How should we approach this situation?"
+    };
+    
+    document.getElementById('scenario-intro').textContent = scenarioIntros[scenario] || "Let's start our conversation!";
+};
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+async function sendMessage() {
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessageToChat('user', message);
+    messageInput.value = '';
+    
+    // Show enhanced typing indicator
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
+    typingDiv.innerHTML = `
+        <div class="flex items-center mb-3">
+            <div class="font-bold text-blue-800 text-sm uppercase tracking-wide">🤖 AI Tutor</div>
+            <div class="ml-2 text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="flex space-x-1">
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            </div>
+            <span class="text-blue-600 text-sm">Analyzing your English and preparing response...</span>
+        </div>
+    `;
+    chatContainer.appendChild(typingDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    try {
+        const response = await fetch('/send_message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                scenario: scenario
+            })
+        });
+        
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Debug: log the received data
+        console.log('Received data:', data);
+        
+        // Check if the data contains raw JSON as a string (the problem we're fixing)
+        let processedData = data;
+        if (typeof data.conversation_response === 'string' && data.conversation_response.includes('```json')) {
+            console.log('Found JSON in markdown format, processing...');
+            
+            // Extract JSON from markdown
+            let jsonContent = data.conversation_response;
+            if (jsonContent.startsWith('```json')) {
+                jsonContent = jsonContent.substring(7); // Remove ```json
+            }
+            if (jsonContent.endsWith('```')) {
+                jsonContent = jsonContent.slice(0, -3); // Remove ```
+            }
+            jsonContent = jsonContent.trim();
+            
+            try {
+                processedData = JSON.parse(jsonContent);
+                console.log('Successfully parsed embedded JSON:', processedData);
+            } catch (e) {
+                console.error('Failed to parse embedded JSON:', e);
+                // Keep original data if parsing fails
+            }
+        }
+        
+        // Remove typing indicator
+        typingDiv.remove();
+        
+        // Validate data structure
+        if (!processedData || typeof processedData !== 'object') {
+            throw new Error('Invalid response format');
+        }
+        
+        // Add AI response with animation
+        const responseDiv = addMessageToChat('ai', processedData.conversation_response || 'Sorry, I received an invalid response.');
+        
+        // Auto-translate if enabled
+        const autoTranslate = document.getElementById('auto-translate').checked;
+        if (autoTranslate) {
+            // Find the translate button in the new message and click it
+            setTimeout(() => {
+                const translateButton = responseDiv.querySelector('button[onclick*="translateChatMessage"]');
+                if (translateButton) {
+                    translateButton.click();
+                }
+            }, 500);
+        }
+        
+        // Show corrections with delay for better UX
+        setTimeout(() => {
+            showCorrections(processedData);
+        }, 800);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        typingDiv.innerHTML = `
+            <div class="flex items-center mb-3">
+                <div class="font-bold text-red-800 text-sm uppercase tracking-wide">❌ Error</div>
+            </div>
+            <div class="text-red-600">Sorry, there was an error connecting to the AI service. Please try again. (${error.message})</div>
+        `;
+    }
+}
+
+function addMessageToChat(sender, message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = sender === 'user' 
+        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 rounded-lg ml-8 animate-slide-up shadow-sm' 
+        : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
+    
+    const senderLabel = sender === 'user' ? '👤 You' : '🤖 AI Tutor';
+    const senderColor = sender === 'user' ? 'text-green-800' : 'text-blue-800';
+    
+    // Generate unique ID for this message
+    const messageId = 'message-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
+    messageDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center">
+                <div class="font-bold ${senderColor} text-sm uppercase tracking-wide">${senderLabel}</div>
+                <div class="ml-2 text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
+            </div>
+            <div class="flex gap-2">
+                ${sender === 'ai' ? `
+                    <button onclick="translateChatMessage('${messageId}', this)" 
+                            class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition flex items-center gap-1"
+                            data-text="${message.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+                        <span class="text-sm">🌐</span> ES
+                    </button>
+                ` : ''}
+                ${sender === 'user' ? `
+                    <button onclick="translateChatMessage('${messageId}', this)" 
+                            class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full hover:bg-green-200 transition flex items-center gap-1"
+                            data-text="${message.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+                        <span class="text-sm">🌐</span> EN→ES
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+        <div class="text-gray-800 leading-relaxed" id="${messageId}">${message}</div>
+        <div class="text-blue-600 text-sm mt-3 hidden italic border-t border-gray-200 pt-2" id="${messageId}-es">
+            <!-- Spanish translation will appear here -->
+        </div>
+    `;
+    
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    return messageDiv;
+}
+
+function showCorrections(data) {
+    if (data.corrections.length === 0 && !data.new_vocabulary.length && !data.suggestions) {
+        correctionsPanel.classList.add('hidden');
+        return;
+    }
+    
+    let content = '';
+    
+    // Corrections
+    if (data.corrections && data.corrections.length > 0) {
+        content += `
+            <div class="mb-6">
+                <div class="flex items-center mb-3">
+                    <span class="text-2xl mr-2">✏️</span>
+                    <h4 class="text-lg font-bold text-red-700">Grammar & Style Corrections</h4>
+                </div>
+        `;
+        data.corrections.forEach((correction, index) => {
+            content += `
+                <div class="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 p-4 rounded-r-lg mb-3 shadow-sm">
+                    <div class="mb-2">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-200 text-red-800">
+                                ${correction.type || 'improvement'}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="bg-white p-3 rounded border border-red-200">
+                                <div class="text-sm text-gray-600 mb-1">Original:</div>
+                                <div class="text-red-600 line-through italic">"${correction.original}"</div>
+                            </div>
+                            <div class="flex justify-center">
+                                <span class="text-green-600 font-bold text-xl">→</span>
+                            </div>
+                            <div class="bg-white p-3 rounded border border-green-200">
+                                <div class="text-sm text-gray-600 mb-1">Better:</div>
+                                <div class="text-green-700 font-medium">"${correction.corrected}"</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 rounded border border-gray-200 mt-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm text-gray-600">💡 Why this is better:</div>
+                            <button onclick="translateText('explanation-${index}', '${correction.explanation.replace(/'/g, "\\'")}', 'en', 'es')" 
+                                    class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full hover:bg-blue-200 transition">
+                                🌐 Traducir
+                            </button>
+                        </div>
+                        <div class="text-gray-800" id="explanation-${index}">${correction.explanation}</div>
+                        <div class="text-blue-600 text-sm mt-2 hidden border-t border-gray-200 pt-2" id="explanation-${index}-es"></div>
+                    </div>
+                </div>
+            `;
+        });
+        content += '</div>';
+    }
+    
+    // New vocabulary
+    if (data.new_vocabulary && data.new_vocabulary.length > 0) {
+        content += `
+            <div class="mb-6">
+                <div class="flex items-center mb-3">
+                    <span class="text-2xl mr-2">📚</span>
+                    <h4 class="text-lg font-bold text-blue-700">New Technical Vocabulary</h4>
+                </div>
+        `;
+        data.new_vocabulary.forEach((vocab, index) => {
+            content += `
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 p-4 rounded-r-lg mb-3 shadow-sm">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="text-xl font-bold text-blue-800">${vocab.word}</div>
+                        <div class="flex gap-2">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-200 text-blue-800">
+                                New Word
+                            </span>
+                            <button onclick="translateText('vocab-def-${index}', '${vocab.definition.replace(/'/g, "\\'")}', 'en', 'es')" 
+                                    class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full hover:bg-green-200 transition">
+                                🌐 ES
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 rounded border border-blue-200 mb-2">
+                        <div class="text-sm text-gray-600 mb-1">Definition:</div>
+                        <div class="text-gray-800" id="vocab-def-${index}">${vocab.definition}</div>
+                        <div class="text-green-600 text-sm mt-2 hidden italic border-t border-gray-200 pt-2" id="vocab-def-${index}-es"></div>
+                    </div>
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 rounded border border-indigo-200">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="text-sm text-gray-600">💼 Professional Example:</div>
+                            <button onclick="translateText('vocab-ex-${index}', '${vocab.example.replace(/'/g, "\\'")}', 'en', 'es')" 
+                                    class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full hover:bg-purple-200 transition">
+                                🌐 ES
+                            </button>
+                        </div>
+                        <div class="text-indigo-700 italic" id="vocab-ex-${index}">"${vocab.example}"</div>
+                        <div class="text-purple-600 text-sm mt-2 hidden italic border-t border-gray-200 pt-2" id="vocab-ex-${index}-es"></div>
+                    </div>
+                </div>
+            `;
+        });
+        content += '</div>';
+    }
+    
+    // Suggestions
+    if (data.suggestions) {
+        content += `
+            <div class="mb-6">
+                <div class="flex items-center mb-3">
+                    <span class="text-2xl mr-2">💡</span>
+                    <h4 class="text-lg font-bold text-yellow-700">Professional Communication Tips</h4>
+                </div>
+                <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 p-4 rounded-r-lg shadow-sm">
+                    <div class="bg-white p-4 rounded border border-yellow-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm text-gray-600">💡 Suggestion:</div>
+                            <button onclick="translateText('suggestions', '${data.suggestions.replace(/'/g, "\\'")}', 'en', 'es')" 
+                                    class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full hover:bg-yellow-200 transition">
+                                🌐 Traducir
+                            </button>
+                        </div>
+                        <div class="text-gray-800 leading-relaxed" id="suggestions">${data.suggestions}</div>
+                        <div class="text-orange-600 text-sm mt-2 hidden italic border-t border-gray-200 pt-2" id="suggestions-es"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('corrections-content').innerHTML = content;
+    correctionsPanel.classList.remove('hidden');
+    
+    // Smooth scroll to corrections
+    correctionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Enhanced translation function with better error handling and caching
+async function translateText(elementId, text, fromLang, toLang) {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    // Check cache first
+    const cacheKey = `${text}-${fromLang}-${toLang}`;
+    if (translationCache.has(cacheKey)) {
+        const cachedTranslation = translationCache.get(cacheKey);
+        showTranslation(elementId, toLang, cachedTranslation, button);
+        return;
+    }
+    
+    // Show loading state
+    button.textContent = '🔄 Traduciendo...';
+    button.disabled = true;
+    
+    try {
+        // Using multiple translation services for better reliability
+        let translatedText = await tryMultipleServices(text, fromLang, toLang);
+        
+        // Cache the result
+        translationCache.set(cacheKey, translatedText);
+        
+        // Show translation
+        showTranslation(elementId, toLang, translatedText, button);
+        
+    } catch (error) {
+        console.error('Translation error:', error);
+        
+        // Enhanced fallback with more technical terms
+        const fallbackTranslation = getFallbackTranslation(text, fromLang, toLang);
+        showTranslation(elementId, toLang, fallbackTranslation + ' (traducción básica)', button);
+        
+        button.textContent = '⚠️ Traducción básica';
+    }
+    
+    button.disabled = false;
+}
+
+// Try multiple translation services
+async function tryMultipleServices(text, fromLang, toLang) {
+    const services = [
+        () => translateWithMyMemory(text, fromLang, toLang),
+        () => translateWithLibreTranslate(text, fromLang, toLang)
+    ];
+    
+    for (const service of services) {
+        try {
+            const result = await service();
+            if (result && result.trim()) {
+                return result;
+            }
+        } catch (error) {
+            console.warn('Translation service failed:', error);
+            continue;
+        }
+    }
+    
+    throw new Error('All translation services failed');
+}
+
+// MyMemory Translation API
+async function translateWithMyMemory(text, fromLang, toLang) {
+    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`);
+    const data = await response.json();
+    
+    if (data.responseStatus === 200) {
+        return data.responseData.translatedText;
+    }
+    throw new Error('MyMemory translation failed');
+}
+
+// LibreTranslate API (fallback)
+async function translateWithLibreTranslate(text, fromLang, toLang) {
+    // This would require a LibreTranslate instance
+    // For now, we'll use the fallback dictionary
+    throw new Error('LibreTranslate not available');
+}
+
+// Enhanced fallback dictionary
+function getFallbackTranslation(text, fromLang, toLang) {
+    if (fromLang === 'en' && toLang === 'es') {
+        const translations = {
+            // Technical terms
+            'feature': 'característica',
+            'dashboard': 'panel de control',
+            'priorities': 'prioridades',
+            'user': 'usuario',
+            'project': 'proyecto',
+            'development': 'desarrollo',
+            'software': 'software',
+            'application': 'aplicación',
+            'system': 'sistema',
+            'database': 'base de datos',
+            'api': 'API',
+            'frontend': 'interfaz de usuario',
+            'backend': 'servidor',
+            'implementation': 'implementación',
+            'requirements': 'requisitos',
+            'architecture': 'arquitectura',
+            'performance': 'rendimiento',
+            'security': 'seguridad',
+            'testing': 'pruebas',
+            'deployment': 'despliegue',
+            'bug': 'error',
+            'debug': 'depurar',
+            'code': 'código',
+            'function': 'función',
+            'variable': 'variable',
+            'algorithm': 'algoritmo',
+            'optimization': 'optimización',
+            
+            // Grammar terms
+            'grammar': 'gramática',
+            'vocabulary': 'vocabulario',
+            'pronunciation': 'pronunciación',
+            'sentence': 'oración',
+            'verb': 'verbo',
+            'noun': 'sustantivo',
+            'adjective': 'adjetivo',
+            'tense': 'tiempo verbal',
+            'passive': 'voz pasiva',
+            'active': 'voz activa',
+            
+            // Common phrases
+            'good morning': 'buenos días',
+            'thank you': 'gracias',
+            'please': 'por favor',
+            'excuse me': 'disculpe',
+            'how are you': 'cómo está',
+            'nice to meet you': 'mucho gusto',
+            'let me know': 'avísame',
+            'sounds good': 'suena bien',
+            'makes sense': 'tiene sentido',
+            'I understand': 'entiendo',
+            'could you': 'podrías',
+            'would you': 'podrías',
+            'I think': 'creo que',
+            'in my opinion': 'en mi opinión',
+            'for example': 'por ejemplo',
+            'however': 'sin embargo',
+            'therefore': 'por lo tanto',
+            'meanwhile': 'mientras tanto',
+            'furthermore': 'además',
+            'nevertheless': 'sin embargo'
+        };
+        
+        let result = text;
+        Object.entries(translations).forEach(([english, spanish]) => {
+            const regex = new RegExp(`\\b${english}\\b`, 'gi');
+            result = result.replace(regex, spanish);
+        });
+        
+        return result;
+    }
+    
+    return text; // Return original if no translation available
+}
+
+function showTranslation(elementId, toLang, translatedText, button) {
+    const translationElement = document.getElementById(`${elementId}-${toLang}`);
+    if (translationElement) {
+        translationElement.innerHTML = `🇪🇸 ${translatedText}`;
+        translationElement.classList.remove('hidden');
+        
+        // Update button
+        button.textContent = '🌐 Ocultar';
+        button.onclick = () => toggleTranslation(elementId, toLang, button);
+    }
+}
+
+// Enhanced translation function for chat messages
+async function translateChatMessage(messageId, button) {
+    const text = button.getAttribute('data-text');
+    const translationElement = document.getElementById(`${messageId}-es`);
+    
+    // Check if already translated
+    if (!translationElement.classList.contains('hidden')) {
+        // Toggle hide/show
+        translationElement.classList.add('hidden');
+        button.innerHTML = '<span class="text-sm">🌐</span> ES';
+        return;
+    }
+    
+    // Check cache first
+    const cacheKey = `${text}-en-es`;
+    if (translationCache.has(cacheKey)) {
+        const cachedTranslation = translationCache.get(cacheKey);
+        translationElement.innerHTML = `🇪🇸 ${cachedTranslation}`;
+        translationElement.classList.remove('hidden');
+        button.innerHTML = '<span class="text-sm">🌐</span> Ocultar';
+        return;
+    }
+    
+    // Show loading state
+    const originalContent = button.innerHTML;
+    button.innerHTML = '🔄 Traduciendo...';
+    button.disabled = true;
+    
+    try {
+        const translatedText = await tryMultipleServices(text, 'en', 'es');
+        
+        // Cache the result
+        translationCache.set(cacheKey, translatedText);
+        
+        // Show translation
+        translationElement.innerHTML = `🇪🇸 ${translatedText}`;
+        translationElement.classList.remove('hidden');
+        
+        // Update button
+        button.innerHTML = '<span class="text-sm">🌐</span> Ocultar';
+        
+    } catch (error) {
+        console.error('Chat translation error:', error);
+        
+        // Use enhanced fallback
+        const fallbackTranslation = getFallbackTranslation(text, 'en', 'es');
+        
+        translationElement.innerHTML = `🇪🇸 ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
+        translationElement.classList.remove('hidden');
+        
+        button.innerHTML = '⚠️ Básica';
+    }
+    
+    button.disabled = false;
+}
+
+function toggleTranslation(elementId, toLang, button) {
+    const translationElement = document.getElementById(`${elementId}-${toLang}`);
+    if (translationElement.classList.contains('hidden')) {
+        translationElement.classList.remove('hidden');
+        button.textContent = '🌐 Ocultar';
+    } else {
+        translationElement.classList.add('hidden');
+        button.textContent = '🌐 Traducir';
+        button.onclick = () => translateText(elementId, translationElement.textContent.replace('🇪🇸 ', ''), 'es', 'en');
+    }
+}
+
+// Add some CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    .animate-slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-bounce {
+        animation: bounce 1.4s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 80%, 100% {
+            transform: scale(0);
+        }
+        40% {
+            transform: scale(1);
+        }
+    }
+    
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    button:hover {
+        transform: translateY(-1px);
+    }
+    
+    .border-t {
+        border-top: 1px solid #e5e7eb;
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

@@ -1,0 +1,386 @@
+<!-- templates/analytics.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+    <!-- Header with Language Toggle -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2" id="main-title">📊 Your Learning Analytics</h2>
+            <p class="text-gray-600" id="subtitle">Track your English learning progress and improvements</p>
+        </div>
+        
+        <!-- Language Toggle -->
+        <div class="flex items-center bg-white rounded-lg shadow-md p-2">
+            <button onclick="toggleLanguage('en')" 
+                    id="btn-en" 
+                    class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-500 text-white">
+                🇺🇸 English
+            </button>
+            <button onclick="toggleLanguage('es')" 
+                    id="btn-es" 
+                    class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100">
+                🇪🇸 Español
+            </button>
+        </div>
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-200">
+            <div class="text-3xl text-blue-500 mb-2">💬</div>
+            <div class="text-2xl font-bold">{{ analytics.today_conversations }}</div>
+            <div class="text-gray-600" data-translate="conversations-today">Conversations Today</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-200">
+            <div class="text-3xl text-green-500 mb-2">📚</div>
+            <div class="text-2xl font-bold">{{ analytics.vocabulary_count }}</div>
+            <div class="text-gray-600" data-translate="words-learned">Words Learned</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-200">
+            <div class="text-3xl text-red-500 mb-2">✏️</div>
+            <div class="text-2xl font-bold">
+                {% if analytics.mistake_patterns %}
+                    {{ analytics.mistake_patterns|length }}
+                {% else %}
+                    0
+                {% endif %}
+            </div>
+            <div class="text-gray-600" data-translate="error-types-found">Error Types Found</div>
+        </div>
+    </div>
+    
+    <!-- Mistake Patterns -->
+    {% if analytics.mistake_patterns %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800" data-translate="common-mistakes">🎯 Most Common Mistakes</h3>
+            <button onclick="translateSection('mistakes-section')" 
+                    class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full hover:bg-red-200 transition">
+                🌐 <span data-translate="translate-btn">Translate</span>
+            </button>
+        </div>
+        <div class="space-y-3" id="mistakes-section">
+            {% for mistake_type, count in analytics.mistake_patterns %}
+            <div class="flex items-center justify-between p-3 bg-red-50 rounded hover:bg-red-100 transition-colors duration-200">
+                <span class="font-medium capitalize" data-translate="mistake-{{ mistake_type }}">{{ mistake_type.replace('_', ' ') }}</span>
+                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+                    {{ count }} <span data-translate="times">times</span>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+            <p class="text-sm text-blue-800" data-translate="mistakes-tip">
+                💡 Focus on your most frequent mistakes to improve faster!
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Problem Areas -->
+    {% if analytics.problem_areas %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800" data-translate="problem-areas">🔍 Areas Needing Practice</h3>
+            <button onclick="translateSection('problem-areas-section')" 
+                    class="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full hover:bg-yellow-200 transition">
+                🌐 <span data-translate="translate-btn">Translate</span>
+            </button>
+        </div>
+        <div class="space-y-3" id="problem-areas-section">
+            {% for scenario, count in analytics.problem_areas %}
+            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded hover:bg-yellow-100 transition-colors duration-200">
+                <span class="font-medium capitalize" data-translate="scenario-{{ scenario }}">{{ scenario.replace('_', ' ') }}</span>
+                <div class="flex items-center space-x-2">
+                    <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
+                        {{ count }} <span data-translate="errors">errors</span>
+                    </span>
+                    <a href="/chat?scenario={{ scenario }}" 
+                       class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors duration-200"
+                       data-translate="practice-btn">Practice</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+            <p class="text-sm text-green-800" data-translate="practice-tip">
+                🎯 Regular practice in these areas will boost your confidence!
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Recommendations -->
+    {% if recommendations %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800" data-translate="recommendations">💡 Personalized Recommendations</h3>
+            <button onclick="translateSection('recommendations-section')" 
+                    class="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full hover:bg-purple-200 transition">
+                🌐 <span data-translate="translate-btn">Translate</span>
+            </button>
+        </div>
+        <div class="space-y-4" id="recommendations-section">
+            {% for rec in recommendations %}
+            <div class="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50 rounded-r-lg hover:bg-blue-100 transition-colors duration-200">
+                <div class="font-medium text-gray-800" data-translate="rec-{{ loop.index }}">{{ rec.content }}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                    <span data-translate="priority">Priority:</span>
+                    {% for i in range(rec.priority) %}⭐{% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+            <p class="text-sm text-indigo-800" data-translate="recommendations-tip">
+                📈 Following these recommendations will accelerate your learning progress!
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Progress Motivation -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-bold mb-2" data-translate="keep-going">🚀 Keep Going!</h3>
+                <p class="text-blue-100" data-translate="motivation-text">
+                    Every conversation brings you closer to fluency. You're doing great!
+                </p>
+            </div>
+            <div class="text-4xl">🎉</div>
+        </div>
+        <div class="mt-4 flex space-x-4">
+            <a href="/scenarios" 
+               class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors duration-200"
+               data-translate="practice-more">Practice More</a>
+            <a href="/vocabulary" 
+               class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+               data-translate="review-vocab">Review Vocabulary</a>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentLanguage = 'en';
+const translations = {
+    'en': {
+        'main-title': '📊 Your Learning Analytics',
+        'subtitle': 'Track your English learning progress and improvements',
+        'conversations-today': 'Conversations Today',
+        'words-learned': 'Words Learned',
+        'error-types-found': 'Error Types Found',
+        'common-mistakes': '🎯 Most Common Mistakes',
+        'problem-areas': '🔍 Areas Needing Practice',
+        'recommendations': '💡 Personalized Recommendations',
+        'translate-btn': 'Translate',
+        'times': 'times',
+        'errors': 'errors',
+        'practice-btn': 'Practice',
+        'priority': 'Priority:',
+        'keep-going': '🚀 Keep Going!',
+        'motivation-text': 'Every conversation brings you closer to fluency. You\'re doing great!',
+        'practice-more': 'Practice More',
+        'review-vocab': 'Review Vocabulary',
+        'mistakes-tip': '💡 Focus on your most frequent mistakes to improve faster!',
+        'practice-tip': '🎯 Regular practice in these areas will boost your confidence!',
+        'recommendations-tip': '📈 Following these recommendations will accelerate your learning progress!',
+        
+        // Mistake types
+        'mistake-grammar': 'Grammar',
+        'mistake-vocabulary': 'Vocabulary',
+        'mistake-pronunciation': 'Pronunciation',
+        'mistake-sentence_structure': 'Sentence Structure',
+        'mistake-verb_tense': 'Verb Tense',
+        'mistake-prepositions': 'Prepositions',
+        'mistake-articles': 'Articles',
+        'mistake-word_order': 'Word Order',
+        'mistake-spelling': 'Spelling',
+        'mistake-punctuation': 'Punctuation',
+        
+        // Scenarios
+        'scenario-daily_standup': 'Daily Standup',
+        'scenario-code_review': 'Code Review',
+        'scenario-technical_interview': 'Technical Interview',
+        'scenario-debugging_session': 'Debugging Session',
+        'scenario-project_planning': 'Project Planning',
+        'scenario-client_meeting': 'Client Meeting',
+        'scenario-architecture_discussion': 'Architecture Discussion',
+        'scenario-deployment_issue': 'Deployment Issue'
+    },
+    'es': {
+        'main-title': '📊 Analítica de Aprendizaje',
+        'subtitle': 'Sigue tu progreso y mejoras en el aprendizaje del inglés',
+        'conversations-today': 'Conversaciones Hoy',
+        'words-learned': 'Palabras Aprendidas',
+        'error-types-found': 'Tipos de Errores Encontrados',
+        'common-mistakes': '🎯 Errores Más Comunes',
+        'problem-areas': '🔍 Áreas que Necesitan Práctica',
+        'recommendations': '💡 Recomendaciones Personalizadas',
+        'translate-btn': 'Traducir',
+        'times': 'veces',
+        'errors': 'errores',
+        'practice-btn': 'Practicar',
+        'priority': 'Prioridad:',
+        'keep-going': '🚀 ¡Sigue Adelante!',
+        'motivation-text': 'Cada conversación te acerca más a la fluidez. ¡Lo estás haciendo genial!',
+        'practice-more': 'Practicar Más',
+        'review-vocab': 'Revisar Vocabulario',
+        'mistakes-tip': '💡 ¡Enfócate en tus errores más frecuentes para mejorar más rápido!',
+        'practice-tip': '🎯 ¡La práctica regular en estas áreas aumentará tu confianza!',
+        'recommendations-tip': '📈 ¡Seguir estas recomendaciones acelerará tu progreso de aprendizaje!',
+        
+        // Mistake types
+        'mistake-grammar': 'Gramática',
+        'mistake-vocabulary': 'Vocabulario',
+        'mistake-pronunciation': 'Pronunciación',
+        'mistake-sentence_structure': 'Estructura de Oración',
+        'mistake-verb_tense': 'Tiempo Verbal',
+        'mistake-prepositions': 'Preposiciones',
+        'mistake-articles': 'Artículos',
+        'mistake-word_order': 'Orden de Palabras',
+        'mistake-spelling': 'Ortografía',
+        'mistake-punctuation': 'Puntuación',
+        
+        // Scenarios
+        'scenario-daily_standup': 'Reunión Diaria',
+        'scenario-code_review': 'Revisión de Código',
+        'scenario-technical_interview': 'Entrevista Técnica',
+        'scenario-debugging_session': 'Sesión de Depuración',
+        'scenario-project_planning': 'Planificación de Proyecto',
+        'scenario-client_meeting': 'Reunión con Cliente',
+        'scenario-architecture_discussion': 'Discusión de Arquitectura',
+        'scenario-deployment_issue': 'Problema de Despliegue'
+    }
+};
+
+function toggleLanguage(lang) {
+    currentLanguage = lang;
+    
+    // Update button states
+    const btnEn = document.getElementById('btn-en');
+    const btnEs = document.getElementById('btn-es');
+    
+    if (lang === 'en') {
+        btnEn.className = 'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-500 text-white';
+        btnEs.className = 'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100';
+    } else {
+        btnEs.className = 'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-500 text-white';
+        btnEn.className = 'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100';
+    }
+    
+    // Translate all elements
+    translateAllElements();
+}
+
+function translateAllElements() {
+    const elements = document.querySelectorAll('[data-translate]');
+    elements.forEach(element => {
+        const key = element.getAttribute('data-translate');
+        if (translations[currentLanguage] && translations[currentLanguage][key]) {
+            element.textContent = translations[currentLanguage][key];
+        }
+    });
+    
+    // Handle special cases
+    const mainTitle = document.getElementById('main-title');
+    const subtitle = document.getElementById('subtitle');
+    
+    if (mainTitle) mainTitle.textContent = translations[currentLanguage]['main-title'];
+    if (subtitle) subtitle.textContent = translations[currentLanguage]['subtitle'];
+}
+
+function translateSection(sectionId) {
+    const button = event.target.closest('button');
+    const isCurrentlyTranslated = button.getAttribute('data-translated') === 'true';
+    
+    if (isCurrentlyTranslated) {
+        // Switch back to English
+        toggleLanguage('en');
+        button.setAttribute('data-translated', 'false');
+        button.innerHTML = '🌐 <span data-translate="translate-btn">Translate</span>';
+    } else {
+        // Switch to Spanish
+        toggleLanguage('es');
+        button.setAttribute('data-translated', 'true');
+        button.innerHTML = '🌐 <span data-translate="translate-btn">English</span>';
+    }
+}
+
+// Advanced features
+function exportAnalytics() {
+    const data = {
+        conversations: {{ analytics.today_conversations }},
+        vocabulary: {{ analytics.vocabulary_count }},
+        mistakes: {{ analytics.mistake_patterns|tojson if analytics.mistake_patterns else '[]' }},
+        problemAreas: {{ analytics.problem_areas|tojson if analytics.problem_areas else '[]' }},
+        recommendations: {{ recommendations|tojson if recommendations else '[]' }}
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'learning-analytics.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Initialize with smooth animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Add entrance animations
+    const cards = document.querySelectorAll('.bg-white');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Add some custom styles
+const style = document.createElement('style');
+style.textContent = `
+    .hover\\:scale-105:hover {
+        transform: scale(1.05);
+    }
+    
+    .transition-transform {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .transition-colors {
+        transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .gradient-text {
+        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}

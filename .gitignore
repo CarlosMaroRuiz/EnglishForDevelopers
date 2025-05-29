@@ -1,0 +1,47 @@
+# ########################
+# Variables de Entorno #
+# ########################
+# Ignora todos los archivos .env en cualquier directorio
+**/.env
+# Ignora también archivos como .env.local, .env.development, etc.
+**/.env.*
+# ¡IMPORTANTE! No ignores los archivos de ejemplo si los usas
+!**/.env.example
+
+# ####################
+# Caché de Python  #
+# ####################
+# Ignora todos los directorios __pycache__
+__pycache__/
+# Ignora archivos de bytecode compilados
+*.pyc
+*.pyo
+*.pyd
+
+# ########################
+# Entornos Virtuales   #
+# ########################
+# Nombres comunes para directorios de entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+.env.bak/
+
+# ########################
+# Archivos específicos IDE #
+# ########################
+.idea/
+.vscode/
+
+# ########################
+# Archivos del Sistema #
+# ########################
+.DS_Store
+Thumbs.db
+
+# ########################
+# Archivos de Base de Datos #
+# ########################
+*.db

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center mb-12">
+    <h2 class="text-4xl font-bold text-gray-800 mb-4">Welcome to Your English Tutor</h2>
+    <p class="text-xl text-gray-600">Practice technical English in realistic workplace scenarios</p>
+</div>
+
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+        <div class="text-4xl mb-4">🗣️</div>
+        <h3 class="text-xl font-semibold mb-2">Real Scenarios</h3>
+        <p class="text-gray-600">Practice in daily standups, code reviews, and technical interviews</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+        <div class="text-4xl mb-4">✍️</div>
+        <h3 class="text-xl font-semibold mb-2">Instant Corrections</h3>
+        <p class="text-gray-600">Get immediate feedback on grammar, vocabulary, and style</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+        <div class="text-4xl mb-4">📊</div>
+        <h3 class="text-xl font-semibold mb-2">Progress Tracking</h3>
+        <p class="text-gray-600">Analyze your mistakes and track improvement over time</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-lg p-8">
+    <h3 class="text-2xl font-bold text-gray-800 mb-6">Choose a Workplace Scenario</h3>
+    
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="/chat?scenario=daily_standup" class="block p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition">
+            <div class="text-2xl mb-2">📅</div>
+            <h4 class="font-semibold">Daily Standup</h4>
+            <p class="text-sm text-gray-600">Share updates and blockers</p>
+        </a>
+        
+        <a href="/chat?scenario=code_review" class="block p-4 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition">
+            <div class="text-2xl mb-2">🔍</div>
+            <h4 class="font-semibold">Code Review</h4>
+            <p class="text-sm text-gray-600">Discuss code quality and improvements</p>
+        </a>
+        
+        <a href="/chat?scenario=technical_interview" class="block p-4 border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition">
+            <div class="text-2xl mb-2">💼</div>
+            <h4 class="font-semibold">Technical Interview</h4>
+            <p class="text-sm text-gray-600">Practice interview skills</p>
+        </a>
+        
+        <a href="/chat?scenario=debugging_session" class="block p-4 border-2 border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition">
+            <div class="text-2xl mb-2">🐛</div>
+            <h4 class="font-semibold">Debugging Session</h4>
+            <p class="text-sm text-gray-600">Solve technical problems together</p>
+        </a>
+        
+        <a href="/chat?scenario=project_planning" class="block p-4 border-2 border-yellow-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition">
+            <div class="text-2xl mb-2">📋</div>
+            <h4 class="font-semibold">Project Planning</h4>
+            <p class="text-sm text-gray-600">Discuss requirements and timeline</p>
+        </a>
+        
+        <a href="/chat?scenario=client_meeting" class="block p-4 border-2 border-indigo-200 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition">
+            <div class="text-2xl mb-2">🤝</div>
+            <h4 class="font-semibold">Client Meeting</h4>
+            <p class="text-sm text-gray-600">Present solutions to clients</p>
+        </a>
+        
+        <a href="/chat?scenario=architecture_discussion" class="block p-4 border-2 border-teal-200 rounded-lg hover:border-teal-400 hover:bg-teal-50 transition">
+            <div class="text-2xl mb-2">🏗️</div>
+            <h4 class="font-semibold">Architecture Discussion</h4>
+            <p class="text-sm text-gray-600">Design system architecture</p>
+        </a>
+        
+        <a href="/chat?scenario=deployment_issue" class="block p-4 border-2 border-orange-200 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition">
+            <div class="text-2xl mb-2">🚀</div>
+            <h4 class="font-semibold">Deployment Issue</h4>
+            <p class="text-sm text-gray-600">Handle production problems</p>
+        </a>
+    </div>
+</div>
+{% endblock %}
