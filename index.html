@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technology Stack Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'code-blue': '#1e40af',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4">
+        <div class="bg-white rounded-lg shadow-lg">
+            <!-- Header -->
+            <div class="bg-code-blue text-white p-6 rounded-t-lg">
+                <h2 class="text-2xl font-bold">Technology Stack Assessment</h2>
+                <p class="text-blue-200 text-sm mt-1">Answer the questions according to your analysis</p>
+            </div>
+            
+            <!-- Quiz Content -->
+            <div class="p-8">
+                <div class="space-y-8">
+                    <!-- Question 1 -->
+                    <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            What <span class="underline decoration-2 decoration-blue-500">___</span> your stack technology?
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question1" value="a" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">a) response 1</span>
+                            </label>
+                            
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question1" value="b" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">b) response 2</span>
+                            </label>
+                            
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question1" value="c" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">c) response 3</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Question 2 -->
+                    <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            What <span class="underline decoration-2 decoration-blue-500">___</span> your stack technology?
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question2" value="a" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">a) response 1</span>
+                            </label>
+                            
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question2" value="b" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">b) response 2</span>
+                            </label>
+                            
+                            <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                                <input type="radio" name="question2" value="c" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3 text-gray-700 font-medium">c) response 3</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="mt-8 text-center">
+                    <button onclick="submitQuiz()" 
+                            class="bg-code-blue text-white px-8 py-3 rounded-lg hover:bg-blue-800 transition-colors font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all">
+                        Enviar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Panel (Hidden by default) -->
+        <div id="results-panel" class="mt-6 bg-white rounded-xl shadow-xl border border-gray-200 p-6 hidden">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <span class="mr-3">📊</span>
+                    Quiz Results
+                </h3>
+                <button onclick="document.getElementById('results-panel').classList.add('hidden')" 
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="results-content" class="space-y-4">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function submitQuiz() {
+            const question1 = document.querySelector('input[name="question1"]:checked');
+            const question2 = document.querySelector('input[name="question2"]:checked');
+            
+            if (!question1 || !question2) {
+                alert('Please answer all questions before submitting.');
+                return;
+            }
+            
+            // Show results panel
+            const resultsPanel = document.getElementById('results-panel');
+            const resultsContent = document.getElementById('results-content');
+            
+            resultsContent.innerHTML = `
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 class="font-semibold text-green-800 mb-2">✅ Quiz Completed!</h4>
+                    <p class="text-green-700">
+                        Question 1: You selected option ${question1.value.toUpperCase()}<br>
+                        Question 2: You selected option ${question2.value.toUpperCase()}
+                    </p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 class="font-semibold text-blue-800 mb-2">💡 Feedback</h4>
+                    <p class="text-blue-700">
+                        Great job completing the technology stack assessment! 
+                        Your responses have been recorded for analysis.
+                    </p>
+                </div>
+            `;
+            
+            resultsPanel.classList.remove('hidden');
+            
+            // Smooth scroll to results
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Add hover effects and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const radioButtons = document.querySelectorAll('input[type="radio"]');
+            
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Remove previous selection styling from siblings
+                    const siblings = document.querySelectorAll(`input[name="${this.name}"]`);
+                    siblings.forEach(sibling => {
+                        const label = sibling.closest('label');
+                        label.classList.remove('border-blue-500', 'bg-blue-100');
+                        label.classList.add('border-gray-200', 'bg-white');
+                    });
+                    
+                    // Add selection styling to current choice
+                    const currentLabel = this.closest('label');
+                    currentLabel.classList.remove('border-gray-200', 'bg-white');
+                    currentLabel.classList.add('border-blue-500', 'bg-blue-100');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

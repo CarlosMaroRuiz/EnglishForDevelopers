@@ -5,28 +5,125 @@
     <p class="text-xl text-gray-600">Practice technical English in realistic workplace scenarios</p>
 </div>
 
-<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+    <div class="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
         <div class="text-4xl mb-4">🗣️</div>
         <h3 class="text-xl font-semibold mb-2">Real Scenarios</h3>
         <p class="text-gray-600">Practice in daily standups, code reviews, and technical interviews</p>
     </div>
     
-    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <div class="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
         <div class="text-4xl mb-4">✍️</div>
         <h3 class="text-xl font-semibold mb-2">Instant Corrections</h3>
         <p class="text-gray-600">Get immediate feedback on grammar, vocabulary, and style</p>
     </div>
     
-    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <div class="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
+        <div class="text-4xl mb-4">📝</div>
+        <h3 class="text-xl font-semibold mb-2">Grammar Quizzes</h3>
+        <p class="text-gray-600">Test your skills with personalized grammar practice</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
         <div class="text-4xl mb-4">📊</div>
         <h3 class="text-xl font-semibold mb-2">Progress Tracking</h3>
         <p class="text-gray-600">Analyze your mistakes and track improvement over time</p>
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow-lg p-8">
-    <h3 class="text-2xl font-bold text-gray-800 mb-6">Choose a Workplace Scenario</h3>
+<!-- Quick Access Section -->
+<div class="grid md:grid-cols-2 gap-8 mb-12">
+    <!-- Practice Section -->
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <span class="mr-3">💬</span>
+            Practice Conversations
+        </h3>
+        
+        <div class="grid md:grid-cols-2 gap-4">
+            <a href="/chat?scenario=daily_standup" class="block p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition">
+                <div class="text-2xl mb-2">📅</div>
+                <h4 class="font-semibold">Daily Standup</h4>
+                <p class="text-sm text-gray-600">Share updates and blockers</p>
+            </a>
+            
+            <a href="/chat?scenario=code_review" class="block p-4 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition">
+                <div class="text-2xl mb-2">🔍</div>
+                <h4 class="font-semibold">Code Review</h4>
+                <p class="text-sm text-gray-600">Discuss code quality and improvements</p>
+            </a>
+            
+            <a href="/chat?scenario=technical_interview" class="block p-4 border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition">
+                <div class="text-2xl mb-2">💼</div>
+                <h4 class="font-semibold">Technical Interview</h4>
+                <p class="text-sm text-gray-600">Practice interview skills</p>
+            </a>
+            
+            <a href="/chat?scenario=debugging_session" class="block p-4 border-2 border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition">
+                <div class="text-2xl mb-2">🐛</div>
+                <h4 class="font-semibold">Debugging Session</h4>
+                <p class="text-sm text-gray-600">Solve technical problems together</p>
+            </a>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <a href="#all-scenarios" class="text-blue-600 hover:text-blue-800 font-medium">
+                View all 8 scenarios →
+            </a>
+        </div>
+    </div>
+    
+    <!-- Quiz Section -->
+    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-lg p-8 border border-purple-200">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <span class="mr-3">📝</span>
+            Grammar Practice
+        </h3>
+        
+        <div class="space-y-4">
+            <div class="bg-white p-4 rounded-lg border border-purple-200">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-semibold text-purple-800">Personalized Quiz</h4>
+                    <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded-full text-xs font-medium">
+                        AI Generated
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">
+                    Questions based on your most common mistakes and areas for improvement
+                </p>
+                <a href="/quiz" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium block text-center">
+                    Take Quiz Now
+                </a>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <h4 class="font-semibold text-gray-800 mb-2">Features:</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li class="flex items-center">
+                        <span class="mr-2">✅</span>
+                        Based on your conversation mistakes
+                    </li>
+                    <li class="flex items-center">
+                        <span class="mr-2">✅</span>
+                        Detailed explanations for each answer
+                    </li>
+                    <li class="flex items-center">
+                        <span class="mr-2">✅</span>
+                        Progress tracking and analytics
+                    </li>
+                    <li class="flex items-center">
+                        <span class="mr-2">✅</span>
+                        Focus areas recommendations
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Scenarios Section -->
+<div id="all-scenarios" class="bg-white rounded-lg shadow-lg p-8">
+    <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">All Workplace Scenarios</h3>
     
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <a href="/chat?scenario=daily_standup" class="block p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition">
@@ -78,4 +175,69 @@
         </a>
     </div>
 </div>
+
+<!-- Stats Section -->
+<div class="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-xl p-8 text-white">
+    <div class="text-center">
+        <h3 class="text-2xl font-bold mb-4">🚀 Start Your Learning Journey</h3>
+        <p class="text-blue-100 mb-6">Join thousands of developers improving their English communication skills</p>
+        
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="text-center">
+                <div class="text-3xl font-bold mb-2">8</div>
+                <div class="text-blue-200 text-sm">Practice Scenarios</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold mb-2">AI</div>
+                <div class="text-blue-200 text-sm">Powered Feedback</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold mb-2">24/7</div>
+                <div class="text-blue-200 text-sm">Available Practice</div>
+            </div>
+        </div>
+        
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="/chat?scenario=daily_standup" 
+               class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                🗣️ Start Conversation
+            </a>
+            <a href="/quiz" 
+               class="bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors">
+                📝 Take Quiz
+            </a>
+            <a href="/report" 
+               class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors">
+                🤖 AI Report
+            </a>
+            <a href="/analytics" 
+               class="border border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+                📊 View Progress
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.transform {
+    transition: transform 0.2s ease-in-out;
+}
+
+.hover\:scale-105:hover {
+    transform: scale(1.05);
+}
+
+.transition-transform {
+    transition: transform 0.2s ease-in-out;
+}
+
+.transition {
+    transition: all 0.2s ease-in-out;
+}
+
+.transition-colors {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+</style>
+
 {% endblock %}

@@ -7,6 +7,7 @@ import os
 import re
 from collections import Counter
 from dotenv import load_dotenv
+import random
 
 # Load environment variables
 load_dotenv()
@@ -132,6 +133,34 @@ def init_db():
         content TEXT NOT NULL,
         priority INTEGER DEFAULT 1,
         is_completed BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Quiz results table
+    c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quiz_type TEXT NOT NULL,
+        total_questions INTEGER NOT NULL,
+        correct_answers INTEGER NOT NULL,
+        incorrect_answers INTEGER NOT NULL,
+        score_percentage REAL NOT NULL,
+        focused_areas TEXT,
+        detailed_results TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Quiz questions table
+    c.execute('''CREATE TABLE IF NOT EXISTS quiz_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question_text TEXT NOT NULL,
+        option_a TEXT NOT NULL,
+        option_b TEXT NOT NULL,
+        option_c TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        explanation TEXT NOT NULL,
+        grammar_category TEXT NOT NULL,
+        difficulty_level INTEGER DEFAULT 1,
+        based_on_user_mistake BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
     
@@ -274,6 +303,90 @@ Do NOT include any other text before or after the JSON. Only return the JSON obj
             "suggestions": f"Error details: {str(e)}"
         }
 
+def generate_quiz_questions(user_mistakes, num_questions=5):
+    """Generate quiz questions based on user's common mistakes"""
+    if not client:
+        return []
+    
+    # Get user's most common mistake types
+    mistake_types = [mistake[0] for mistake in user_mistakes[:3]]  # Top 3 mistake types
+    
+    system_prompt = f"""You are an English grammar quiz generator for software developers. 
+
+Based on the user's common mistakes in these areas: {', '.join(mistake_types)}, generate {num_questions} multiple choice questions to help them practice.
+
+Focus on technical English and workplace communication scenarios.
+
+IMPORTANT: You MUST respond with valid JSON in exactly this format:
+{{
+    "questions": [
+        {{
+            "question": "Choose the correct sentence for a daily standup:",
+            "option_a": "I worked on API integration yesterday",
+            "option_b": "I work on API integration yesterday", 
+            "option_c": "I working on API integration yesterday",
+            "correct_answer": "a",
+            "explanation": "Past tense 'worked' is correct when describing completed actions",
+            "category": "verb_tense"
+        }}
+    ]
+}}
+
+Generate questions that are:
+1. Relevant to software development contexts
+2. Focus on the user's problem areas: {', '.join(mistake_types)}
+3. Have clear explanations 
+4. Use realistic workplace scenarios
+
+Do NOT include any other text before or after the JSON."""
+
+    try:
+        response = client.chat_completions_create(
+            model="deepseek-chat",
+            messages=[{"role": "system", "content": system_prompt}],
+            temperature=0.7
+        )
+        
+        content = response.choices[0].message.content.strip()
+        
+        # Clean up the response
+        if content.startswith('```json'):
+            content = content[7:]
+        if content.endswith('```'):
+            content = content[:-3]
+        content = content.strip()
+        
+        # Parse JSON response
+        parsed_response = json.loads(content)
+        questions = parsed_response.get("questions", [])
+        
+        # Save questions to database
+        conn = sqlite3.connect('english_tutor.db')
+        c = conn.cursor()
+        
+        for q in questions:
+            c.execute('''INSERT INTO quiz_questions 
+                         (question_text, option_a, option_b, option_c, correct_answer, 
+                          explanation, grammar_category, based_on_user_mistake)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (q.get('question', ''),
+                       q.get('option_a', ''),
+                       q.get('option_b', ''),
+                       q.get('option_c', ''),
+                       q.get('correct_answer', 'a'),
+                       q.get('explanation', ''),
+                       q.get('category', 'general'),
+                       True))
+        
+        conn.commit()
+        conn.close()
+        
+        return questions
+        
+    except Exception as e:
+        print(f"Error generating quiz questions: {e}")
+        return []
+
 def save_conversation(user_message, ai_response, corrections, scenario):
     conn = sqlite3.connect('english_tutor.db')
     c = conn.cursor()
@@ -317,6 +430,23 @@ def save_vocabulary(vocabulary_list):
     conn.commit()
     conn.close()
 
+def save_quiz_result(quiz_type, total_questions, correct_answers, detailed_results, focused_areas):
+    conn = sqlite3.connect('english_tutor.db')
+    c = conn.cursor()
+    
+    incorrect_answers = total_questions - correct_answers
+    score_percentage = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
+    
+    c.execute('''INSERT INTO quiz_results 
+                 (quiz_type, total_questions, correct_answers, incorrect_answers, 
+                  score_percentage, focused_areas, detailed_results)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)''',
+              (quiz_type, total_questions, correct_answers, incorrect_answers,
+               score_percentage, json.dumps(focused_areas), json.dumps(detailed_results)))
+    
+    conn.commit()
+    conn.close()
+
 def get_user_analytics():
     conn = sqlite3.connect('english_tutor.db')
     c = conn.cursor()
@@ -346,14 +476,186 @@ def get_user_analytics():
                  LIMIT 3''')
     problem_areas = c.fetchall()
     
+    # Quiz statistics
+    c.execute('''SELECT AVG(score_percentage), COUNT(*) 
+                 FROM quiz_results 
+                 WHERE date(timestamp) >= date('now', '-7 days')''')
+    quiz_stats = c.fetchone()
+    
     conn.close()
     
     return {
         'mistake_patterns': mistake_patterns,
         'today_conversations': today_conversations,
         'vocabulary_count': vocabulary_count,
-        'problem_areas': problem_areas
+        'problem_areas': problem_areas,
+        'quiz_stats': {
+            'avg_score': quiz_stats[0] or 0,
+            'total_quizzes': quiz_stats[1] or 0
+        }
     }
+
+def generate_ai_personal_report():
+    """Generate a comprehensive AI analysis report of the user's English skills"""
+    if not client:
+        return {
+            "strengths": ["Unable to analyze - AI service not available"],
+            "weaknesses": ["Please check your API configuration"],
+            "grammar_mastered": [],
+            "grammar_needs_work": [],
+            "focus_areas": [],
+            "recommendations": [],
+            "overall_assessment": "AI analysis unavailable",
+            "learning_path": []
+        }
+    
+    # Get comprehensive user data
+    conn = sqlite3.connect('english_tutor.db')
+    c = conn.cursor()
+    
+    # Get mistake patterns with context
+    c.execute('''SELECT gm.mistake_type, gm.original_text, gm.corrected_text, 
+                        gm.explanation, c.scenario, COUNT(*) as frequency
+                 FROM grammar_mistakes gm
+                 JOIN conversations c ON gm.conversation_id = c.id
+                 GROUP BY gm.mistake_type, gm.original_text
+                 ORDER BY frequency DESC
+                 LIMIT 20''')
+    detailed_mistakes = c.fetchall()
+    
+    # Get vocabulary progress
+    c.execute('''SELECT word, definition, times_encountered, category
+                 FROM vocabulary 
+                 ORDER BY times_encountered DESC
+                 LIMIT 15''')
+    vocabulary_data = c.fetchall()
+    
+    # Get quiz performance by category
+    c.execute('''SELECT detailed_results FROM quiz_results 
+                 ORDER BY timestamp DESC LIMIT 10''')
+    quiz_history = c.fetchall()
+    
+    # Get conversation scenarios performance
+    c.execute('''SELECT scenario, COUNT(*) as total, 
+                        SUM(CASE WHEN corrections = '[]' THEN 1 ELSE 0 END) as perfect
+                 FROM conversations 
+                 GROUP BY scenario
+                 ORDER BY total DESC''')
+    scenario_performance = c.fetchall()
+    
+    conn.close()
+    
+    # Prepare data for AI analysis
+    analysis_data = {
+        "mistakes": detailed_mistakes,
+        "vocabulary": vocabulary_data,
+        "quiz_history": quiz_history,
+        "scenarios": scenario_performance
+    }
+    
+    system_prompt = f"""You are an expert English language analyst for software developers. 
+Analyze the following learning data and provide a comprehensive personal report.
+
+User's Learning Data:
+- Common Mistakes: {len(detailed_mistakes)} different error patterns
+- Vocabulary: {len(vocabulary_data)} technical terms learned
+- Quiz History: {len(quiz_history)} recent quizzes taken
+- Conversation Scenarios: {len(scenario_performance)} different workplace contexts
+
+Based on this data, provide a detailed analysis in JSON format:
+
+{{
+    "strengths": [
+        "List 3-5 specific areas where the user excels",
+        "Include grammar topics they handle well",
+        "Mention vocabulary strengths"
+    ],
+    "weaknesses": [
+        "List 3-5 specific areas needing improvement", 
+        "Focus on recurring mistake patterns",
+        "Include challenging grammar concepts"
+    ],
+    "grammar_mastered": [
+        "Grammar topics the user demonstrates proficiency in",
+        "Based on few/no mistakes in these areas"
+    ],
+    "grammar_needs_work": [
+        "Grammar topics with frequent mistakes",
+        "Areas requiring focused practice"
+    ],
+    "focus_areas": [
+        "Top 3 priority areas for improvement",
+        "Most impactful areas to work on next"
+    ],
+    "recommendations": [
+        "Specific, actionable recommendations",
+        "Include study strategies and practice methods"
+    ],
+    "overall_assessment": "2-3 sentence summary of current English level and progress",
+    "learning_path": [
+        "Step-by-step learning plan for next 2-4 weeks",
+        "Ordered by priority and logical progression"
+    ],
+    "personality_insights": [
+        "Learning style observations",
+        "Communication patterns noticed"
+    ]
+}}
+
+Focus on software development communication contexts. Be specific and constructive.
+Do NOT include any text before or after the JSON object."""
+
+    try:
+        response = client.chat_completions_create(
+            model="deepseek-chat",
+            messages=[{"role": "system", "content": system_prompt}],
+            temperature=0.7
+        )
+        
+        content = response.choices[0].message.content.strip()
+        
+        # Clean up the response
+        if content.startswith('```json'):
+            content = content[7:]
+        if content.endswith('```'):
+            content = content[:-3]
+        content = content.strip()
+        
+        # Parse JSON response
+        report = json.loads(content)
+        
+        # Validate and set defaults
+        default_report = {
+            "strengths": [],
+            "weaknesses": [],
+            "grammar_mastered": [],
+            "grammar_needs_work": [],
+            "focus_areas": [],
+            "recommendations": [],
+            "overall_assessment": "",
+            "learning_path": [],
+            "personality_insights": []
+        }
+        
+        for key in default_report:
+            if key not in report:
+                report[key] = default_report[key]
+        
+        return report
+        
+    except Exception as e:
+        print(f"Error generating AI report: {e}")
+        return {
+            "strengths": ["You're actively practicing English with AI feedback"],
+            "weaknesses": ["Unable to generate detailed analysis due to technical issues"],
+            "grammar_mastered": [],
+            "grammar_needs_work": [],
+            "focus_areas": ["Continue practicing conversations", "Take more quizzes"],
+            "recommendations": ["Keep using the chat feature", "Try different scenarios"],
+            "overall_assessment": "Keep practicing! Your dedication to learning is your biggest strength.",
+            "learning_path": ["Practice daily conversations", "Focus on grammar quizzes"],
+            "personality_insights": ["Shows commitment to learning"]
+        }
 
 def generate_recommendations():
     analytics = get_user_analytics()
@@ -383,6 +685,14 @@ def generate_recommendations():
             'type': 'vocabulary',
             'content': "Build your technical vocabulary - aim to learn 5 new terms this week",
             'priority': 1
+        })
+    
+    # Quiz recommendations
+    if analytics['quiz_stats']['avg_score'] < 70:
+        recommendations.append({
+            'type': 'quiz_practice',
+            'content': "Your quiz average is below 70%. Take more grammar quizzes to improve!",
+            'priority': 3
         })
     
     return recommendations
@@ -419,6 +729,157 @@ def send_message():
         save_vocabulary(analysis.get('new_vocabulary', []))
     
     return jsonify(analysis)
+
+@app.route('/quiz')
+def quiz():
+    return render_template('quiz.html')
+
+@app.route('/generate_quiz', methods=['POST'])
+def generate_quiz():
+    try:
+        # Get user's mistake patterns
+        conn = sqlite3.connect('english_tutor.db')
+        c = conn.cursor()
+        c.execute('''SELECT mistake_type, COUNT(*) as count 
+                     FROM grammar_mistakes 
+                     GROUP BY mistake_type 
+                     ORDER BY count DESC
+                     LIMIT 5''')
+        user_mistakes = c.fetchall()
+        conn.close()
+        
+        if not user_mistakes:
+            # If no mistakes found, create default questions
+            default_questions = [
+                {
+                    "question": "Choose the correct sentence for a code review:",
+                    "option_a": "This function works good",
+                    "option_b": "This function works well",
+                    "option_c": "This function work well",
+                    "correct_answer": "b",
+                    "explanation": "'Well' is the correct adverb to describe how something works",
+                    "category": "grammar"
+                },
+                {
+                    "question": "Which is the correct way to report a bug?",
+                    "option_a": "I found a bug in the login system",
+                    "option_b": "I finded a bug in the login system",
+                    "option_c": "I find a bug in the login system",
+                    "correct_answer": "a",
+                    "explanation": "'Found' is the correct past tense of 'find'",
+                    "category": "verb_tense"
+                }
+            ]
+            return jsonify({"questions": default_questions})
+        
+        # Generate questions based on user mistakes
+        questions = generate_quiz_questions(user_mistakes, 5)
+        
+        if not questions:
+            return jsonify({"error": "Failed to generate quiz questions"}), 500
+        
+        return jsonify({"questions": questions})
+        
+    except Exception as e:
+        print(f"Error in generate_quiz: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/submit_quiz', methods=['POST'])
+def submit_quiz():
+    try:
+        data = request.json
+        answers = data.get('answers', {})
+        questions = data.get('questions', [])
+        
+        if not answers or not questions:
+            return jsonify({"error": "Missing quiz data"}), 400
+        
+        # Calculate results
+        correct_count = 0
+        total_questions = len(questions)
+        detailed_results = []
+        focused_areas = []
+        
+        for i, question in enumerate(questions):
+            user_answer = answers.get(str(i))
+            correct_answer = question.get('correct_answer')
+            is_correct = user_answer == correct_answer
+            
+            if is_correct:
+                correct_count += 1
+            else:
+                focused_areas.append(question.get('category', 'general'))
+            
+            detailed_results.append({
+                'question': question.get('question'),
+                'user_answer': user_answer,
+                'correct_answer': correct_answer,
+                'is_correct': is_correct,
+                'explanation': question.get('explanation'),
+                'category': question.get('category')
+            })
+        
+        # Calculate score
+        score_percentage = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+        
+        # Save results to database
+        save_quiz_result('grammar_practice', total_questions, correct_count, detailed_results, focused_areas)
+        
+        # Generate feedback message
+        if score_percentage >= 90:
+            feedback = "¡Excelente! Your English grammar is very strong."
+        elif score_percentage >= 70:
+            feedback = "¡Buen trabajo! You have a good understanding, but there's room for improvement."
+        elif score_percentage >= 50:
+            feedback = "Not bad, but you should focus more on the areas where you made mistakes."
+        else:
+            feedback = "Keep practicing! Focus on the grammar areas highlighted in your results."
+        
+        return jsonify({
+            "score": score_percentage,
+            "correct": correct_count,
+            "total": total_questions,
+            "feedback": feedback,
+            "detailed_results": detailed_results,
+            "focused_areas": list(set(focused_areas))
+        })
+        
+    except Exception as e:
+        print(f"Error in submit_quiz: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/report')
+def personal_report():
+    """Generate and display comprehensive AI analysis report"""
+    try:
+        # Generate AI report
+        ai_report = generate_ai_personal_report()
+        
+        # Get additional analytics data
+        analytics = get_user_analytics()
+        
+        return render_template('report.html', 
+                             report=ai_report, 
+                             analytics=analytics)
+        
+    except Exception as e:
+        print(f"Error generating report: {e}")
+        # Fallback data
+        fallback_report = {
+            "strengths": ["You're committed to learning"],
+            "weaknesses": ["Continue practicing regularly"],
+            "grammar_mastered": [],
+            "grammar_needs_work": [],
+            "focus_areas": ["Daily practice", "Grammar quizzes"],
+            "recommendations": ["Keep practicing conversations"],
+            "overall_assessment": "Keep up the great work with your English practice!",
+            "learning_path": ["Daily conversations", "Weekly quizzes"],
+            "personality_insights": ["Dedicated learner"]
+        }
+        analytics = get_user_analytics()
+        return render_template('report.html', 
+                             report=fallback_report, 
+                             analytics=analytics)
 
 @app.route('/analytics')
 def analytics():

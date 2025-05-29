@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold gradient-text mb-4">📝 Grammar Practice Quiz</h2>
+        <p class="text-xl text-gray-600">Test your English grammar skills with personalized questions</p>
+        <p class="text-sm text-gray-500 mt-2">Based on your most common mistakes and areas for improvement</p>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white rounded-xl shadow-xl p-8 text-center">
+        <div class="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">Generating Your Personalized Quiz</h3>
+        <p class="text-gray-600">Analyzing your learning patterns to create the perfect practice session...</p>
+        <div class="mt-4 bg-blue-50 p-4 rounded-lg">
+            <div class="flex items-center justify-center text-sm text-blue-700">
+                <span class="mr-2">🧠</span>
+                <span>Creating questions based on your most common mistakes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Container -->
+    <div id="quiz-container" class="bg-white rounded-xl shadow-xl hidden">
+        <!-- Quiz Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold">Grammar Assessment</h2>
+                    <p class="text-blue-200 text-sm mt-1">Answer the questions according to your analysis</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-3xl font-bold" id="question-counter">1/5</div>
+                    <div class="text-sm text-blue-200">Questions</div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mt-4 bg-blue-500 rounded-full h-2">
+                <div id="progress-bar" class="bg-white rounded-full h-2 transition-all duration-300" style="width: 20%;"></div>
+            </div>
+        </div>
+        
+        <!-- Quiz Content -->
+        <div class="p-8">
+            <div id="questions-container" class="space-y-8">
+                <!-- Questions will be populated here by JavaScript -->
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <div class="mt-8 flex justify-between items-center">
+                <button id="prev-btn" onclick="previousQuestion()" 
+                        class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                    ← Previous
+                </button>
+                
+                <div class="flex space-x-4">
+                    <button id="next-btn" onclick="nextQuestion()" 
+                            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                        Next →
+                    </button>
+                    <button id="submit-btn" onclick="submitQuiz()" 
+                            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all hidden">
+                        Submit Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Panel -->
+    <div id="results-panel" class="mt-6 bg-white rounded-xl shadow-xl border border-gray-200 p-6 hidden">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+            <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+                <span class="mr-3">📊</span>
+                Quiz Results
+            </h3>
+            <button onclick="document.getElementById('results-panel').classList.add('hidden')" 
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Score Summary -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+                <div class="text-4xl font-bold text-green-600 mb-2" id="score-display">0%</div>
+                <div class="text-green-700 font-medium">Final Score</div>
+            </div>
+            <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <div class="text-4xl font-bold text-blue-600 mb-2" id="correct-display">0/0</div>
+                <div class="text-blue-700 font-medium">Correct Answers</div>
+            </div>
+            <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
+                <div class="text-4xl font-bold text-purple-600 mb-2" id="level-display">Beginner</div>
+                <div class="text-purple-700 font-medium">Your Level</div>
+            </div>
+        </div>
+        
+        <!-- Feedback Message -->
+        <div id="feedback-message" class="mb-6 p-4 rounded-lg border-l-4">
+            <!-- Feedback will be populated here -->
+        </div>
+        
+        <!-- Detailed Results -->
+        <div class="mb-6">
+            <h4 class="text-lg font-bold text-gray-800 mb-4">📝 Detailed Review</h4>
+            <div id="detailed-results" class="space-y-4">
+                <!-- Detailed results will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Focus Areas -->
+        <div id="focus-areas-section" class="mb-6 hidden">
+            <h4 class="text-lg font-bold text-gray-800 mb-4">🎯 Areas to Focus On</h4>
+            <div id="focus-areas" class="flex flex-wrap gap-2">
+                <!-- Focus areas will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 justify-center">
+            <button onclick="retakeQuiz()" 
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                🔄 Take Another Quiz
+            </button>
+            <button onclick="viewAnalytics()" 
+                    class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                📊 View Analytics
+            </button>
+            <button onclick="practiceMore()" 
+                    class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                💬 Practice Conversations
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentQuestions = [];
+let currentQuestionIndex = 0;
+let userAnswers = {};
+let totalQuestions = 0;
+
+// Initialize quiz
+window.onload = function() {
+    generateQuiz();
+};
+
+async function generateQuiz() {
+    try {
+        const response = await fetch('/generate_quiz', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        currentQuestions = data.questions || [];
+        totalQuestions = currentQuestions.length;
+        
+        if (totalQuestions === 0) {
+            throw new Error('No questions were generated');
+        }
+        
+        // Hide loading and show quiz
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        
+        // Initialize quiz
+        renderQuestion();
+        updateProgress();
+        
+    } catch (error) {
+        console.error('Error generating quiz:', error);
+        document.getElementById('loading-state').innerHTML = `
+            <div class="text-center">
+                <div class="text-4xl mb-4">❌</div>
+                <h3 class="text-xl font-semibold text-red-600 mb-2">Error Loading Quiz</h3>
+                <p class="text-gray-600 mb-4">${error.message}</p>
+                <button onclick="location.reload()" 
+                        class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors">
+                    Try Again
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderQuestion() {
+    if (currentQuestionIndex >= totalQuestions) return;
+    
+    const question = currentQuestions[currentQuestionIndex];
+    const container = document.getElementById('questions-container');
+    
+    container.innerHTML = `
+        <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200 animate-fade-in">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                ${question.question}
+            </h3>
+            
+            <div class="space-y-3">
+                <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                    <input type="radio" name="question${currentQuestionIndex}" value="a" class="w-4 h-4 text-blue-600 focus:ring-blue-500" onchange="selectAnswer('a')">
+                    <span class="ml-3 text-gray-700 font-medium">a) ${question.option_a}</span>
+                </label>
+                
+                <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                    <input type="radio" name="question${currentQuestionIndex}" value="b" class="w-4 h-4 text-blue-600 focus:ring-blue-500" onchange="selectAnswer('b')">
+                    <span class="ml-3 text-gray-700 font-medium">b) ${question.option_b}</span>
+                </label>
+                
+                <label class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all">
+                    <input type="radio" name="question${currentQuestionIndex}" value="c" class="w-4 h-4 text-blue-600 focus:ring-blue-500" onchange="selectAnswer('c')">
+                    <span class="ml-3 text-gray-700 font-medium">c) ${question.option_c}</span>
+                </label>
+            </div>
+        </div>
+    `;
+    
+    // Restore previous answer if exists
+    const previousAnswer = userAnswers[currentQuestionIndex];
+    if (previousAnswer) {
+        const radio = document.querySelector(`input[name="question${currentQuestionIndex}"][value="${previousAnswer}"]`);
+        if (radio) {
+            radio.checked = true;
+            selectAnswer(previousAnswer, false);
+        }
+    }
+}
+
+function selectAnswer(answer, updateProgress = true) {
+    userAnswers[currentQuestionIndex] = answer;
+    
+    // Visual feedback
+    const labels = document.querySelectorAll(`input[name="question${currentQuestionIndex}"]`).forEach(input => {
+        const label = input.closest('label');
+        if (input.value === answer) {
+            label.classList.add('border-blue-500', 'bg-blue-100');
+            label.classList.remove('border-gray-200', 'bg-white');
+        } else {
+            label.classList.remove('border-blue-500', 'bg-blue-100');
+            label.classList.add('border-gray-200', 'bg-white');
+        }
+    });
+    
+    if (updateProgress) {
+        updateNavigationButtons();
+    }
+}
+
+function nextQuestion() {
+    if (currentQuestionIndex < totalQuestions - 1) {
+        currentQuestionIndex++;
+        renderQuestion();
+        updateProgress();
+        updateNavigationButtons();
+    }
+}
+
+function previousQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        renderQuestion();
+        updateProgress();
+        updateNavigationButtons();
+    }
+}
+
+function updateProgress() {
+    const progressPercentage = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+    document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+    document.getElementById('question-counter').textContent = `${currentQuestionIndex + 1}/${totalQuestions}`;
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Previous button
+    prevBtn.disabled = currentQuestionIndex === 0;
+    
+    // Next/Submit buttons
+    if (currentQuestionIndex === totalQuestions - 1) {
+        nextBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+    } else {
+        nextBtn.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+    }
+}
+
+async function submitQuiz() {
+    // Check if all questions are answered
+    const answeredQuestions = Object.keys(userAnswers).length;
+    if (answeredQuestions < totalQuestions) {
+        const unanswered = totalQuestions - answeredQuestions;
+        if (!confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) {
+            return;
+        }
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submit-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Submitting...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/submit_quiz', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                answers: userAnswers,
+                questions: currentQuestions
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const results = await response.json();
+        
+        if (results.error) {
+            throw new Error(results.error);
+        }
+        
+        // Show results
+        displayResults(results);
+        
+    } catch (error) {
+        console.error('Error submitting quiz:', error);
+        alert('Error submitting quiz: ' + error.message);
+        
+        // Restore button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+function displayResults(results) {
+    // Hide quiz container
+    document.getElementById('quiz-container').classList.add('hidden');
+    
+    // Show results panel
+    const resultsPanel = document.getElementById('results-panel');
+    resultsPanel.classList.remove('hidden');
+    
+    // Update score displays
+    document.getElementById('score-display').textContent = `${Math.round(results.score)}%`;
+    document.getElementById('correct-display').textContent = `${results.correct}/${results.total}`;
+    
+    // Determine level
+    let level = 'Beginner';
+    if (results.score >= 90) level = 'Expert';
+    else if (results.score >= 80) level = 'Advanced';
+    else if (results.score >= 70) level = 'Intermediate';
+    else if (results.score >= 60) level = 'Pre-Intermediate';
+    document.getElementById('level-display').textContent = level;
+    
+    // Feedback message
+    const feedbackDiv = document.getElementById('feedback-message');
+    let feedbackClass = 'border-green-500 bg-green-50';
+    if (results.score < 50) feedbackClass = 'border-red-500 bg-red-50';
+    else if (results.score < 70) feedbackClass = 'border-yellow-500 bg-yellow-50';
+    
+    feedbackDiv.className = `mb-6 p-4 rounded-lg border-l-4 ${feedbackClass}`;
+    feedbackDiv.innerHTML = `
+        <div class="flex items-center">
+            <span class="text-2xl mr-3">${results.score >= 70 ? '🎉' : results.score >= 50 ? '👍' : '💪'}</span>
+            <div>
+                <div class="font-semibold text-gray-800">${results.feedback}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                    ${results.score >= 90 ? 'Outstanding work!' : 
+                      results.score >= 70 ? 'Keep up the good work!' : 
+                      'Practice makes perfect!'}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Detailed results
+    const detailedDiv = document.getElementById('detailed-results');
+    detailedDiv.innerHTML = results.detailed_results.map((result, index) => `
+        <div class="p-4 rounded-lg border ${result.is_correct ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                    <div class="font-medium text-gray-800">Question ${index + 1}: ${result.question}</div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        Your answer: <span class="font-medium">${result.user_answer ? result.user_answer.toUpperCase() : 'Not answered'}</span>
+                        ${!result.is_correct ? `| Correct: <span class="font-medium text-green-600">${result.correct_answer.toUpperCase()}</span>` : ''}
+                    </div>
+                </div>
+                <span class="text-2xl ml-4">${result.is_correct ? '✅' : '❌'}</span>
+            </div>
+            ${!result.is_correct ? `
+                <div class="mt-3 p-3 bg-white rounded border border-gray-200">
+                    <div class="text-sm text-gray-600 mb-1">💡 Explanation:</div>
+                    <div class="text-sm text-gray-800">${result.explanation}</div>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+    
+    // Focus areas
+    if (results.focused_areas && results.focused_areas.length > 0) {
+        const focusSection = document.getElementById('focus-areas-section');
+        const focusDiv = document.getElementById('focus-areas');
+        
+        focusSection.classList.remove('hidden');
+        focusDiv.innerHTML = results.focused_areas.map(area => `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                ${area.replace('_', ' ')}
+            </span>
+        `).join('');
+    }
+    
+    // Smooth scroll to results
+    setTimeout(() => {
+        resultsPanel.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+}
+
+// Action functions
+function retakeQuiz() {
+    // Reset state
+    currentQuestionIndex = 0;
+    userAnswers = {};
+    
+    // Hide results and show loading
+    document.getElementById('results-panel').classList.add('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('loading-state').classList.remove('hidden');
+    
+    // Generate new quiz
+    generateQuiz();
+}
+
+function viewAnalytics() {
+    window.location.href = '/analytics';
+}
+
+function practiceMore() {
+    window.location.href = '/';
+}
+
+// Add keyboard navigation
+document.addEventListener('keydown', function(event) {
+    if (document.getElementById('quiz-container').classList.contains('hidden')) return;
+    
+    switch(event.key) {
+        case 'ArrowLeft':
+            if (currentQuestionIndex > 0) previousQuestion();
+            break;
+        case 'ArrowRight':
+            if (currentQuestionIndex < totalQuestions - 1) nextQuestion();
+            break;
+        case '1':
+        case 'a':
+            selectAnswer('a');
+            document.querySelector(`input[name="question${currentQuestionIndex}"][value="a"]`).checked = true;
+            break;
+        case '2':
+        case 'b':
+            selectAnswer('b');
+            document.querySelector(`input[name="question${currentQuestionIndex}"][value="b"]`).checked = true;
+            break;
+        case '3':
+        case 'c':
+            selectAnswer('c');
+            document.querySelector(`input[name="question${currentQuestionIndex}"][value="c"]`).checked = true;
+            break;
+        case 'Enter':
+            if (currentQuestionIndex === totalQuestions - 1) {
+                submitQuiz();
+            } else {
+                nextQuestion();
+            }
+            break;
+    }
+});
+
+// Add custom styles
+const style = document.createElement('style');
+style.textContent = `
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .gradient-text {
+        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    
+    button:hover {
+        transform: translateY(-1px);
+    }
+    
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}
