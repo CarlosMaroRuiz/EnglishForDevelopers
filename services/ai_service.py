@@ -26,7 +26,7 @@ class DeepSeekClient:
         }
         
         try:
-            response = requests.post(url, headers=self.headers, json=payload, timeout=30)
+            response = requests.post(url, headers=self.headers, json=payload, timeout=15)  # Reduced timeout
             response.raise_for_status()
             
             data = response.json()
@@ -42,6 +42,8 @@ class DeepSeekClient:
             
             return ChatCompletion([Choice(data['choices'][0]['message']['content'])])
             
+        except requests.exceptions.Timeout:
+            raise Exception(f"API request timed out after 15 seconds. Try again or use a shorter story.")
         except requests.exceptions.RequestException as e:
             raise Exception(f"API request failed: {str(e)}")
         except KeyError as e:
@@ -238,6 +240,116 @@ Do NOT include any other text before or after the JSON."""
             print(f"Error generating quiz questions: {e}")
             return []
     
+    def generate_story_with_ai(self, parameters):
+        """Generate an interactive story using AI based on user parameters"""
+        if not self.client:
+            return None
+        
+        # Build comprehensive prompt for story generation
+        length_specs = {
+            'short': {
+                'time': '2-4 minutes',
+                'steps': '1-2 interactive steps',
+                'content_length': '100-200 words',
+                'focus': 'Quick, focused practice'
+            },
+            'medium': {
+                'time': '4-7 minutes', 
+                'steps': '2-4 interactive steps',
+                'content_length': '200-350 words',
+                'focus': 'Moderate depth practice'
+            },
+            'long': {
+                'time': '7-12 minutes',
+                'steps': '4-6 interactive steps', 
+                'content_length': '350-500 words',
+                'focus': 'Comprehensive practice'
+            }
+        }
+        
+        length_info = length_specs.get(parameters.get('length', 'short'), length_specs['short'])
+        
+        system_prompt = f"""You are an expert story creator for English language learning, specialized in software development scenarios.
+
+Create a CONCISE, engaging, interactive story with these specifications:
+
+PARAMETERS:
+- Topic: {parameters.get('topic', 'software_development')}
+- Scenario: {parameters.get('scenario', 'daily_standup')}
+- Difficulty: {parameters.get('difficulty', 'intermediate')}
+- Length: {parameters.get('length', 'short')} ({length_info['time']})
+- Focus Areas: {parameters.get('focus_areas', [])}
+
+STORY REQUIREMENTS:
+1. Create a realistic but BRIEF professional scenario
+2. Keep content concise - {length_info['content_length']} for introduction
+3. Design {length_info['steps']} that require quick, focused responses
+4. Focus on practical workplace communication
+5. Make it immediately engaging and actionable
+
+RESPONSE FORMAT - Return ONLY valid JSON:
+{{
+    "title": "Short, catchy title (max 6 words)",
+    "description": "1-2 sentence description of the quick learning experience",
+    "content": "Brief narrative introduction ({length_info['content_length']}) - set up the scenario quickly and clearly",
+    "learning_objectives": ["objective1", "objective2"],
+    "estimated_time": {length_info['time'].split('-')[0]},
+    "total_steps": {length_info['steps'].split('-')[0]},
+    "steps": [
+        {{
+            "step_number": 1,
+            "type": "question",
+            "content": "Brief situation setup (1-2 sentences)",
+            "question": "Specific, actionable question requiring a quick professional response",
+            "expected_response_type": "open",
+            "learning_focus": "communication_skills"
+        }}
+    ]
+}}
+
+CONCISENESS GUIDELINES:
+- Short stories: 1-2 steps maximum, very focused
+- Medium stories: 2-4 steps, moderate depth
+- Keep ALL content brief and practical
+- Focus on immediate application
+- Avoid lengthy narratives - get to the point quickly
+
+DIFFICULTY GUIDELINES:
+- Beginner: Simple, clear situations with basic vocabulary
+- Intermediate: Professional scenarios with standard terminology  
+- Advanced: Complex but brief technical discussions
+
+Make it SHORT, practical, and immediately useful for workplace English practice."""
+
+        try:
+            response = self.client.chat_completions_create(
+                model="deepseek-chat",
+                messages=[{"role": "system", "content": system_prompt}],
+                temperature=0.8
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            if content.startswith('```json'):
+                content = content[7:]
+            if content.endswith('```'):
+                content = content[:-3]
+            content = content.strip()
+            
+            # Parse JSON response
+            try:
+                story_data = json.loads(content)
+                return story_data
+            except json.JSONDecodeError as e:
+                print(f"JSON parsing error in story generation: {e}")
+                print(f"Raw content: {content[:500]}...")
+                return None
+                
+        except Exception as e:
+            print(f"Error generating story with AI: {e}")
+            return None
+    
     def generate_ai_personal_report(self):
         """Generate a comprehensive AI analysis report of the user's English skills"""
         if not self.client:
@@ -258,6 +370,7 @@ Do NOT include any other text before or after the JSON."""
         vocabulary_data = self.db_service.get_vocabulary_for_report()
         quiz_history = self.db_service.get_quiz_history_for_report()
         scenario_performance = self.db_service.get_scenario_performance_for_report()
+        story_progress = self.db_service.get_user_story_progress()
         
         system_prompt = f"""You are an expert English language analyst for software developers. 
 Analyze the following learning data and provide a comprehensive personal report.
@@ -267,6 +380,7 @@ User's Learning Data:
 - Vocabulary: {len(vocabulary_data)} technical terms learned
 - Quiz History: {len(quiz_history)} recent quizzes taken
 - Conversation Scenarios: {len(scenario_performance)} different workplace contexts
+- Story Progress: {len(story_progress)} stories engaged with
 
 Based on this data, provide a detailed analysis in JSON format:
 

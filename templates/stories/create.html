@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold gradient-text mb-4">✍️ Create Your Own Story</h2>
+        <p class="text-xl text-gray-600">Design custom learning experiences for English practice</p>
+        <p class="text-sm text-gray-500 mt-2">Create engaging stories that help you practice specific scenarios</p>
+    </div>
+
+    <!-- Creation Methods -->
+    <div class="grid md:grid-cols-2 gap-8 mb-8">
+        <!-- Manual Creation -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center mb-4">
+                <span class="text-3xl mr-3">✍️</span>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Manual Creation</h3>
+                    <p class="text-gray-600 text-sm">Write your own story content</p>
+                </div>
+            </div>
+            <p class="text-gray-700 mb-4">Perfect for specific situations you want to practice or custom scenarios tailored to your learning needs.</p>
+            <button onclick="showManualForm()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                Start Writing
+            </button>
+        </div>
+
+        <!-- AI Generation -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center mb-4">
+                <span class="text-3xl mr-3">🤖</span>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">AI Generation</h3>
+                    <p class="text-gray-600 text-sm">Let AI create a personalized story</p>
+                </div>
+            </div>
+            <p class="text-gray-700 mb-4">AI will generate an interactive story based on your preferences, skill level, and learning objectives.</p>
+            <button onclick="showAIForm()" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                Generate with AI
+            </button>
+        </div>
+    </div>
+
+    <!-- Manual Creation Form -->
+    <div id="manual-form" class="bg-white rounded-xl shadow-lg p-8 hidden">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-800">✍️ Write Your Story</h3>
+            <button onclick="hideAllForms()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form id="manual-story-form" class="space-y-6">
+            <!-- Basic Information -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Story Title *</label>
+                    <input type="text" id="manual-title" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Enter an engaging title...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Time (minutes)</label>
+                    <input type="number" id="manual-time" min="5" max="60" value="15"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Scenario and Difficulty -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Scenario *</label>
+                    <select id="manual-scenario" required class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select a scenario...</option>
+                        <option value="daily_standup">Daily Standup</option>
+                        <option value="code_review">Code Review</option>
+                        <option value="technical_interview">Technical Interview</option>
+                        <option value="debugging_session">Debugging Session</option>
+                        <option value="project_planning">Project Planning</option>
+                        <option value="client_meeting">Client Meeting</option>
+                        <option value="architecture_discussion">Architecture Discussion</option>
+                        <option value="deployment_issue">Deployment Issue</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty Level *</label>
+                    <select id="manual-difficulty" required class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select difficulty...</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Story Description</label>
+                <textarea id="manual-description" rows="3"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Brief description of what learners will experience..."></textarea>
+            </div>
+
+            <!-- Main Content -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Story Content *</label>
+                <textarea id="manual-content" required rows="8"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Write your story here. Describe the scenario, setting, characters, and situation. Be descriptive and engaging to help learners immerse themselves in the professional context..."></textarea>
+                <div class="text-sm text-gray-500 mt-1">
+                    <span id="content-word-count">0</span> words • Recommended: 200-500 words
+                </div>
+            </div>
+
+            <!-- Learning Objectives -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Learning Objectives</label>
+                <div class="grid md:grid-cols-3 gap-3">
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="technical_vocabulary" class="learning-objective mr-3">
+                        <span class="text-sm">Technical Vocabulary</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="communication_skills" class="learning-objective mr-3">
+                        <span class="text-sm">Communication Skills</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="problem_solving" class="learning-objective mr-3">
+                        <span class="text-sm">Problem Solving</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="presentation_skills" class="learning-objective mr-3">
+                        <span class="text-sm">Presentation Skills</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="reading_comprehension" class="learning-objective mr-3">
+                        <span class="text-sm">Reading Comprehension</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="writing_skills" class="learning-objective mr-3">
+                        <span class="text-sm">Writing Skills</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex space-x-4 pt-6 border-t border-gray-200">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    📝 Create Story
+                </button>
+                <button type="button" onclick="hideAllForms()" class="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- AI Generation Form -->
+    <div id="ai-form" class="bg-white rounded-xl shadow-lg p-8 hidden">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-800">🤖 AI Story Generator</h3>
+            <button onclick="hideAllForms()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form id="ai-story-form" class="space-y-6">
+            <!-- Basic Parameters -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Topic Focus</label>
+                    <select id="ai-topic" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="software_development">Software Development</option>
+                        <option value="web_development">Web Development</option>
+                        <option value="mobile_development">Mobile Development</option>
+                        <option value="devops">DevOps & Deployment</option>
+                        <option value="data_science">Data Science</option>
+                        <option value="cybersecurity">Cybersecurity</option>
+                        <option value="ai_ml">AI & Machine Learning</option>
+                        <option value="startup">Tech Startup</option>
+                        <option value="freelancing">Freelancing</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Scenario Type</label>
+                    <select id="ai-scenario" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="daily_standup">Daily Standup</option>
+                        <option value="code_review">Code Review</option>
+                        <option value="technical_interview">Technical Interview</option>
+                        <option value="debugging_session">Debugging Session</option>
+                        <option value="project_planning">Project Planning</option>
+                        <option value="client_meeting">Client Meeting</option>
+                        <option value="architecture_discussion">Architecture Discussion</option>
+                        <option value="deployment_issue">Deployment Issue</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Difficulty and Length -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
+                    <select id="ai-difficulty" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="beginner">Beginner - Simple vocabulary and scenarios</option>
+                        <option value="intermediate">Intermediate - Professional situations</option>
+                        <option value="advanced">Advanced - Complex technical discussions</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Story Length</label>
+                    <select id="ai-length" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="short">Short (5-10 min, 3-4 interactions)</option>
+                        <option value="medium">Medium (10-15 min, 5-6 interactions)</option>
+                        <option value="long">Long (15-25 min, 7-8 interactions)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Learning Focus Areas -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">Learning Focus Areas (Select up to 3)</label>
+                <div class="grid md:grid-cols-3 gap-3">
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="technical_vocabulary" class="ai-focus-area mr-3">
+                        <span class="text-sm">Technical Vocabulary</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="communication_skills" class="ai-focus-area mr-3">
+                        <span class="text-sm">Communication Skills</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="problem_solving" class="ai-focus-area mr-3">
+                        <span class="text-sm">Problem Solving</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="presentation_skills" class="ai-focus-area mr-3">
+                        <span class="text-sm">Presentation Skills</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="negotiation" class="ai-focus-area mr-3">
+                        <span class="text-sm">Negotiation</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" value="leadership" class="ai-focus-area mr-3">
+                        <span class="text-sm">Leadership</span>
+                    </label>
+                </div>
+                <div class="text-sm text-gray-500 mt-2">
+                    <span id="focus-count">0</span>/3 selected
+                </div>
+            </div>
+
+            <!-- Additional Preferences -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Additional Preferences (Optional)</label>
+                <textarea id="ai-preferences" rows="3"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          placeholder="Any specific requirements, industry context, or situations you'd like the AI to include in your story..."></textarea>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex space-x-4 pt-6 border-t border-gray-200">
+                <button type="submit" class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    🤖 Generate Story
+                </button>
+                <button type="button" onclick="hideAllForms()" class="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Tips -->
+    <div class="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-200">
+        <h4 class="text-lg font-semibold text-blue-800 mb-3">💡 Story Creation Tips</h4>
+        <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
+            <div>
+                <h5 class="font-medium mb-2">For Manual Stories:</h5>
+                <ul class="space-y-1">
+                    <li>• Set a clear professional context</li>
+                    <li>• Include realistic challenges</li>
+                    <li>• Use appropriate technical vocabulary</li>
+                    <li>• Create engaging dialogue opportunities</li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="font-medium mb-2">For AI Stories:</h5>
+                <ul class="space-y-1">
+                    <li>• Be specific about your learning goals</li>
+                    <li>• Choose realistic difficulty levels</li>
+                    <li>• Limit focus areas for better results</li>
+                    <li>• Provide context in preferences</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loading-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 text-center max-w-md w-full">
+        <div class="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Creating Your Story</h3>
+        <p class="text-gray-600" id="loading-message">Please wait while we create your interactive learning experience...</p>
+    </div>
+</div>
+
+<script>
+// Form visibility management
+function showManualForm() {
+    hideAllForms();
+    document.getElementById('manual-form').classList.remove('hidden');
+    document.getElementById('manual-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showAIForm() {
+    hideAllForms();
+    document.getElementById('ai-form').classList.remove('hidden');
+    document.getElementById('ai-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideAllForms() {
+    document.getElementById('manual-form').classList.add('hidden');
+    document.getElementById('ai-form').classList.add('hidden');
+}
+
+// Word count for manual content
+function updateWordCount() {
+    const content = document.getElementById('manual-content').value;
+    const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+    document.getElementById('content-word-count').textContent = words;
+}
+
+document.getElementById('manual-content').addEventListener('input', updateWordCount);
+
+// Focus area counter for AI form
+function updateFocusCount() {
+    const checked = document.querySelectorAll('.ai-focus-area:checked').length;
+    document.getElementById('focus-count').textContent = checked;
+    
+    // Disable unchecked boxes if 3 are selected
+    const checkboxes = document.querySelectorAll('.ai-focus-area');
+    checkboxes.forEach(cb => {
+        if (!cb.checked) {
+            cb.disabled = checked >= 3;
+            cb.closest('label').style.opacity = checked >= 3 ? '0.5' : '1';
+        }
+    });
+}
+
+document.querySelectorAll('.ai-focus-area').forEach(cb => {
+    cb.addEventListener('change', updateFocusCount);
+});
+
+// Form submissions
+document.getElementById('manual-story-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Collect learning objectives
+    const objectives = Array.from(document.querySelectorAll('.learning-objective:checked'))
+                           .map(cb => cb.value);
+    
+    const formData = {
+        story_type: 'manual',
+        title: document.getElementById('manual-title').value,
+        description: document.getElementById('manual-description').value,
+        content: document.getElementById('manual-content').value,
+        scenario: document.getElementById('manual-scenario').value,
+        difficulty: document.getElementById('manual-difficulty').value,
+        estimated_time: parseInt(document.getElementById('manual-time').value) || 15,
+        learning_objectives: objectives
+    };
+    
+    await submitStory(formData, 'Creating your custom story...');
+});
+
+document.getElementById('ai-story-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Collect focus areas
+    const focusAreas = Array.from(document.querySelectorAll('.ai-focus-area:checked'))
+                           .map(cb => cb.value);
+    
+    const formData = {
+        topic: document.getElementById('ai-topic').value,
+        scenario: document.getElementById('ai-scenario').value,
+        difficulty: document.getElementById('ai-difficulty').value,
+        length: document.getElementById('ai-length').value,
+        focus_areas: focusAreas,
+        additional_preferences: document.getElementById('ai-preferences').value
+    };
+    
+    await submitStory(formData, 'AI is generating your personalized story...', '/stories/generate');
+});
+
+async function submitStory(formData, loadingMessage, endpoint = '/stories/create') {
+    showLoading(loadingMessage);
+    
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success || data.id) {
+            // Redirect to the new story
+            const storyId = data.story_id || data.id;
+            window.location.href = `/stories/${storyId}`;
+        } else {
+            throw new Error(data.error || 'Failed to create story');
+        }
+    } catch (error) {
+        hideLoading();
+        alert('Error creating story: ' + error.message);
+    }
+}
+
+function showLoading(message) {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('loading-modal').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loading-modal').classList.add('hidden');
+}
+
+// Add custom styles
+const style = document.createElement('style');
+style.textContent = `
+    .gradient-text {
+        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}

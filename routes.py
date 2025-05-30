@@ -32,6 +32,14 @@ class Routes:
         
         # History routes
         self.app.add_url_rule('/history', 'history', self.history, methods=['GET'])
+        
+        # NEW: Stories routes
+        self.app.add_url_rule('/stories', 'stories_list', self.stories_list, methods=['GET'])
+        self.app.add_url_rule('/stories/<int:story_id>', 'story_detail', self.story_detail, methods=['GET'])
+        self.app.add_url_rule('/stories/create', 'create_story', self.create_story, methods=['GET', 'POST'])
+        self.app.add_url_rule('/stories/<int:story_id>/interact', 'story_interact', self.story_interact, methods=['POST'])
+        self.app.add_url_rule('/stories/generate', 'generate_story', self.generate_story, methods=['POST'])
+        self.app.add_url_rule('/stories/<int:story_id>/complete', 'complete_story', self.complete_story, methods=['POST'])
     
     def index(self):
         """Home page with scenario selection"""
@@ -167,3 +175,118 @@ class Routes:
         except Exception as e:
             print(f"Error in history: {e}")
             return render_template('history.html', conversations=[])
+    
+    # NEW: Stories routes
+    def stories_list(self):
+        """Display list of available stories"""
+        try:
+            stories = self.business_service.get_stories_list()
+            user_progress = self.business_service.get_user_story_progress()
+            return render_template('stories/list.html', stories=stories, user_progress=user_progress)
+            
+        except Exception as e:
+            print(f"Error in stories_list: {e}")
+            return render_template('stories/list.html', stories=[], user_progress={})
+    
+    def story_detail(self, story_id):
+        """Display individual story with interaction"""
+        try:
+            story = self.business_service.get_story_by_id(story_id)
+            if not story:
+                return render_template('stories/not_found.html'), 404
+            
+            user_progress = self.business_service.get_story_progress(story_id)
+            interactions = self.business_service.get_story_interactions(story_id)
+            
+            return render_template('stories/detail.html', 
+                                 story=story, 
+                                 user_progress=user_progress,
+                                 interactions=interactions)
+            
+        except Exception as e:
+            print(f"Error in story_detail: {e}")
+            return render_template('stories/error.html', error=str(e)), 500
+    
+    def create_story(self):
+        """Create or generate new story"""
+        if request.method == 'GET':
+            return render_template('stories/create.html')
+        
+        try:
+            data = request.json if request.is_json else request.form
+            story_type = data.get('story_type', 'generated')
+            
+            if story_type == 'generated':
+                # Generate story using AI
+                topic = data.get('topic', 'general')
+                difficulty = data.get('difficulty', 'intermediate')
+                scenario = data.get('scenario', 'daily_standup')
+                
+                story = self.business_service.generate_ai_story(topic, difficulty, scenario)
+            else:
+                # Manual story creation
+                title = data.get('title', '')
+                content = data.get('content', '')
+                scenario = data.get('scenario', 'general')
+                difficulty = data.get('difficulty', 'intermediate')
+                
+                if not title or not content:
+                    return jsonify({"error": "Title and content are required"}), 400
+                
+                story = self.business_service.create_manual_story(title, content, scenario, difficulty)
+            
+            return jsonify({"success": True, "story_id": story['id']})
+            
+        except Exception as e:
+            print(f"Error in create_story: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    def story_interact(self, story_id):
+        """Handle user interactions with stories"""
+        try:
+            data = request.json
+            user_response = data.get('response', '')
+            current_step = data.get('current_step', 0)
+            
+            if not user_response.strip():
+                return jsonify({"error": "Response cannot be empty"}), 400
+            
+            # Process interaction through business service
+            result = self.business_service.process_story_interaction(
+                story_id, user_response, current_step
+            )
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            print(f"Error in story_interact: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    def generate_story(self):
+        """Generate a new AI story"""
+        try:
+            data = request.json
+            parameters = {
+                'topic': data.get('topic', 'software development'),
+                'difficulty': data.get('difficulty', 'intermediate'),
+                'scenario': data.get('scenario', 'daily_standup'),
+                'length': data.get('length', 'medium'),
+                'focus_areas': data.get('focus_areas', [])
+            }
+            
+            story = self.business_service.generate_ai_story(**parameters)
+            return jsonify(story)
+            
+        except Exception as e:
+            print(f"Error in generate_story: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    def complete_story(self, story_id):
+        """Mark story as completed and generate summary"""
+        try:
+            completion_data = self.business_service.complete_story(story_id)
+            return jsonify(completion_data)
+            
+        except Exception as e:
+            print(f"Error in complete_story: {e}")
+            return jsonify({"error": str(e)}), 500

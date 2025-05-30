@@ -1,0 +1,776 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Story Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header Background -->
+        <div class="h-40 bg-gradient-to-br 
+            {% if story['scenario'] == 'debugging_session' %}from-red-400 to-red-600
+            {% elif story['scenario'] == 'code_review' %}from-blue-400 to-blue-600
+            {% elif story['scenario'] == 'technical_interview' %}from-purple-400 to-purple-600
+            {% elif story['scenario'] == 'daily_standup' %}from-green-400 to-green-600
+            {% elif story['scenario'] == 'project_planning' %}from-yellow-400 to-yellow-600
+            {% elif story['scenario'] == 'client_meeting' %}from-indigo-400 to-indigo-600
+            {% elif story['scenario'] == 'architecture_discussion' %}from-teal-400 to-teal-600
+            {% elif story['scenario'] == 'deployment_issue' %}from-orange-400 to-orange-600
+            {% else %}from-gray-400 to-gray-600{% endif %}
+            relative flex items-center justify-center text-white">
+            
+            <!-- Back Button -->
+            <a href="/stories" class="absolute top-4 left-4 bg-black bg-opacity-30 text-white px-3 py-2 rounded-lg hover:bg-opacity-50 transition-colors text-sm">
+                ← Back to Stories
+            </a>
+            
+            <!-- Story Icon and Type -->
+            <div class="text-center">
+                <div class="text-5xl mb-3">
+                    {% if story['scenario'] == 'debugging_session' %}🐛
+                    {% elif story['scenario'] == 'code_review' %}🔍
+                    {% elif story['scenario'] == 'technical_interview' %}💼
+                    {% elif story['scenario'] == 'daily_standup' %}📅
+                    {% elif story['scenario'] == 'project_planning' %}📋
+                    {% elif story['scenario'] == 'client_meeting' %}🤝
+                    {% elif story['scenario'] == 'architecture_discussion' %}🏗️
+                    {% elif story['scenario'] == 'deployment_issue' %}🚀
+                    {% else %}📚{% endif %}
+                </div>
+                <div class="text-lg font-medium capitalize">
+                    {{ story['scenario'].replace('_', ' ') }} Story
+                </div>
+            </div>
+            
+            <!-- Progress Indicator -->
+            {% if user_progress %}
+            <div class="absolute top-4 right-4">
+                <div class="bg-black bg-opacity-30 rounded-lg px-3 py-2">
+                    <div class="text-xs text-white mb-1">Progress</div>
+                    <div class="text-lg font-bold">{{ user_progress.completion_percentage|round }}%</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Story Info -->
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ story['title'] }}</h1>
+                    <p class="text-gray-600 leading-relaxed">{{ story['description'] or story['content'][:200] + '...' if story['content']|length > 200 else story['content'] }}</p>
+                </div>
+                
+                <div class="ml-6 flex flex-col space-y-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                        {% if story['difficulty_level'] == 'beginner' %}bg-green-100 text-green-800
+                        {% elif story['difficulty_level'] == 'intermediate' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ story['difficulty_level'].title() }}
+                    </span>
+                    
+                    {% if user_progress and user_progress.is_completed %}
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium text-center">
+                        ✅ Completed
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Story Metadata -->
+            <div class="grid md:grid-cols-4 gap-4 text-sm text-gray-600">
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {{ story['estimated_time'] }} minutes
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {{ story['total_steps'] }} steps
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    {{ story['topic'].replace('_', ' ').title() }}
+                </div>
+                {% if user_progress %}
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    {{ user_progress.total_interactions }} interactions
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Progress Bar -->
+    {% if user_progress %}
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Story Progress</span>
+            <span class="text-sm text-gray-600">Step {{ user_progress.current_step }} of {{ story.total_steps }}</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                 style="width: {{ user_progress.completion_percentage }}%"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Story Container -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <!-- Story Content Area -->
+        <div class="p-6">
+            <div id="story-content" class="space-y-6">
+                <!-- Story Introduction -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                    <div class="flex items-center mb-3">
+                        <span class="text-2xl mr-3">📖</span>
+                        <h3 class="text-lg font-bold text-blue-800">Story Introduction</h3>
+                    </div>
+                    <div class="text-gray-800 leading-relaxed" id="story-intro">
+                        {{ story['content'] }}
+                    </div>
+                    <div class="text-blue-600 text-sm mt-3 hidden italic" id="story-intro-es">
+                        <!-- Spanish translation will appear here -->
+                    </div>
+                    <button onclick="translateText('story-intro', '{{ story['content'].replace("'", "\\'") }}', 'en', 'es')" 
+                            class="mt-3 bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition text-sm">
+                        🌐 Translate Introduction
+                    </button>
+                </div>
+
+                <!-- Current Step Display -->
+                <div id="current-step-container" class="hidden">
+                    <!-- Step content will be loaded here -->
+                </div>
+
+                <!-- Interaction Area -->
+                <div id="interaction-area" class="hidden">
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Your Response</h4>
+                        <textarea id="user-response" rows="4" 
+                                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                  placeholder="Type your response here. Think about how you would handle this situation professionally..."></textarea>
+                        
+                        <div class="flex items-center justify-between mt-4">
+                            <div class="text-sm text-gray-600">
+                                <span id="word-count">0</span> words • <span id="char-count">0</span> characters
+                            </div>
+                            <div class="flex space-x-3">
+                                <button onclick="clearResponse()" 
+                                        class="text-gray-600 hover:text-gray-800 text-sm">
+                                    🔄 Clear
+                                </button>
+                                <button onclick="submitResponse()" 
+                                        id="submit-btn"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Submit Response
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Feedback Area -->
+                <div id="feedback-area" class="hidden">
+                    <!-- Feedback will be populated here -->
+                </div>
+
+                <!-- Navigation Controls -->
+                <div id="story-navigation" class="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <button onclick="previousStep()" 
+                            id="prev-step-btn"
+                            class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                        ← Previous Step
+                    </button>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="startStory()" 
+                                id="start-btn"
+                                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                            🚀 Start Story
+                        </button>
+                        
+                        <button onclick="nextStep()" 
+                                id="next-step-btn"
+                                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium hidden">
+                            Next Step →
+                        </button>
+                        
+                        <button onclick="completeStory()" 
+                                id="complete-btn"
+                                class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium hidden">
+                            🎉 Complete Story
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Objectives -->
+    {% if story['learning_objectives'] %}
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+            <span class="mr-2">🎯</span>
+            Learning Objectives
+        </h3>
+        <div class="grid md:grid-cols-2 gap-3">
+            {% for objective in story['learning_objectives'] %}
+            <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                <span class="text-green-600 mr-3">✓</span>
+                <span class="text-green-800">{{ objective }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Interactions (if any) -->
+    {% if interactions %}
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+            <span class="mr-2">💬</span>
+            Your Recent Interactions
+        </h3>
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+            {% for interaction in interactions[:5] %}
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Step {{ interaction.step_number }}</span>
+                    <span class="text-xs text-gray-500">{{ interaction.timestamp }}</span>
+                </div>
+                <div class="text-sm text-gray-800 mb-2">
+                    <strong>Your response:</strong> {{ interaction.user_response[:100] }}{% if interaction.user_response|length > 100 %}...{% endif %}
+                </div>
+                {% if interaction.ai_feedback %}
+                <div class="text-sm text-blue-700 bg-blue-50 p-2 rounded">
+                    <strong>AI Feedback:</strong> {{ interaction.ai_feedback[:100] }}{% if interaction.ai_feedback|length > 100 %}...{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Completion Modal -->
+<div id="completion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+        <div class="p-6 text-center">
+            <div class="text-6xl mb-4">🎉</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Congratulations!</h3>
+            <div id="completion-content">
+                <!-- Completion details will be populated here -->
+            </div>
+            <div class="flex space-x-3 justify-center mt-6">
+                <a href="/stories" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    📚 Browse More Stories
+                </a>
+                <button onclick="retryStory()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    🔄 Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loading-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 text-center">
+        <div class="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Processing Your Response</h3>
+        <p class="text-gray-600" id="loading-message">AI is analyzing your English and preparing feedback...</p>
+    </div>
+</div>
+
+<script>
+// Global variables
+let currentStory = {{ story|tojson }};
+let userProgress = {{ user_progress|tojson if user_progress else 'null' }};
+let currentStep = userProgress ? userProgress.current_step : 1;
+let isStoryStarted = userProgress ? true : false;
+let responseStartTime = null;
+
+// Translation cache
+const translationCache = new Map();
+
+// Initialize story
+document.addEventListener('DOMContentLoaded', function() {
+    updateWordCount();
+    updateNavigation();
+    
+    if (isStoryStarted) {
+        loadCurrentStep();
+    }
+});
+
+// Text area word count
+function updateWordCount() {
+    const textarea = document.getElementById('user-response');
+    const text = textarea.value;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const chars = text.length;
+    
+    document.getElementById('word-count').textContent = words;
+    document.getElementById('char-count').textContent = chars;
+    
+    // Enable/disable submit button
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = words < 3; // Require at least 3 words
+}
+
+document.getElementById('user-response').addEventListener('input', updateWordCount);
+
+// Story flow functions
+function startStory() {
+    isStoryStarted = true;
+    currentStep = 1;
+    
+    // Hide start button, show interaction elements
+    document.getElementById('start-btn').classList.add('hidden');
+    loadCurrentStep();
+    updateNavigation();
+}
+
+function loadCurrentStep() {
+    if (!currentStory.steps || currentStep > currentStory.steps.length) {
+        // Story completed
+        completeStory();
+        return;
+    }
+    
+    const step = currentStory.steps[currentStep - 1];
+    displayStep(step);
+    
+    // Show interaction area if it's a question step
+    if (step.type === 'question' || step.question) {
+        document.getElementById('interaction-area').classList.remove('hidden');
+        responseStartTime = Date.now();
+    } else {
+        document.getElementById('interaction-area').classList.add('hidden');
+    }
+    
+    updateNavigation();
+}
+
+function displayStep(step) {
+    const container = document.getElementById('current-step-container');
+    container.classList.remove('hidden');
+    
+    const stepTypeColors = {
+        'narrative': 'from-blue-50 to-blue-100 border-blue-200',
+        'question': 'from-green-50 to-green-100 border-green-200',
+        'dialogue': 'from-purple-50 to-purple-100 border-purple-200',
+        'technical': 'from-orange-50 to-orange-100 border-orange-200',
+        'scenario': 'from-indigo-50 to-indigo-100 border-indigo-200'
+    };
+    
+    const stepTypeIcons = {
+        'narrative': '📖',
+        'question': '❓',
+        'dialogue': '💬',
+        'technical': '⚙️',
+        'scenario': '🎬'
+    };
+    
+    const colorClass = stepTypeColors[step.type] || stepTypeColors['narrative'];
+    const icon = stepTypeIcons[step.type] || stepTypeIcons['narrative'];
+    
+    container.innerHTML = `
+        <div class="bg-gradient-to-r ${colorClass} p-6 rounded-lg border">
+            <div class="flex items-center mb-3">
+                <span class="text-2xl mr-3">${icon}</span>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Step ${currentStep}: ${step.type.replace('_', ' ').toUpperCase()}</h3>
+                    ${step.learning_focus ? `<p class="text-sm text-gray-600">Focus: ${step.learning_focus}</p>` : ''}
+                </div>
+            </div>
+            <div class="text-gray-800 leading-relaxed mb-4" id="step-content-${currentStep}">
+                ${step.content}
+            </div>
+            ${step.question ? `
+                <div class="bg-white p-4 rounded border border-gray-200 mt-4">
+                    <div class="text-sm text-gray-600 mb-1"><strong>Question:</strong></div>
+                    <div class="text-gray-800" id="step-question-${currentStep}">${step.question}</div>
+                </div>
+            ` : ''}
+            <div class="mt-3 flex space-x-2">
+                <button onclick="translateStepContent(${currentStep}, '${step.content.replace(/'/g, "\\'")}', 'content')" 
+                        class="bg-white bg-opacity-50 text-gray-700 px-3 py-1 rounded hover:bg-opacity-70 transition text-sm">
+                    🌐 Translate Content
+                </button>
+                ${step.question ? `
+                    <button onclick="translateStepContent(${currentStep}, '${step.question.replace(/'/g, "\\'")}', 'question')" 
+                            class="bg-white bg-opacity-50 text-gray-700 px-3 py-1 rounded hover:bg-opacity-70 transition text-sm">
+                        🌐 Translate Question
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function submitResponse() {
+    const responseText = document.getElementById('user-response').value.trim();
+    
+    if (responseText.length < 10) {
+        alert('Please provide a more detailed response (at least 10 characters).');
+        return;
+    }
+    
+    // Calculate response time
+    const responseTime = responseStartTime ? Math.round((Date.now() - responseStartTime) / 1000) : 0;
+    
+    // Show loading
+    showLoading('AI is analyzing your response and preparing feedback...');
+    
+    try {
+        const response = await fetch(`/stories/${currentStory.id}/interact`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                response: responseText,
+                current_step: currentStep,
+                response_time: responseTime
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        // Hide loading
+        hideLoading();
+        
+        // Display feedback
+        displayFeedback(data);
+        
+        // Update progress
+        if (data.story_progress) {
+            updateProgressBar(data.story_progress);
+        }
+        
+        // Clear response area
+        document.getElementById('user-response').value = '';
+        updateWordCount();
+        
+        // Hide interaction area and show next step button
+        document.getElementById('interaction-area').classList.add('hidden');
+        
+        if (data.is_complete) {
+            document.getElementById('next-step-btn').classList.add('hidden');
+            document.getElementById('complete-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('next-step-btn').classList.remove('hidden');
+        }
+        
+        updateNavigation();
+        
+    } catch (error) {
+        hideLoading();
+        alert('Error submitting response: ' + error.message);
+    }
+}
+
+function displayFeedback(data) {
+    const feedbackArea = document.getElementById('feedback-area');
+    feedbackArea.classList.remove('hidden');
+    
+    let feedbackHtml = `
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+            <div class="flex items-center mb-4">
+                <span class="text-2xl mr-3">🤖</span>
+                <div>
+                    <h4 class="text-lg font-bold text-purple-800">AI Feedback</h4>
+                    <div class="text-sm text-purple-600">Score: ${data.interaction_score}/100</div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded border border-purple-200 mb-4">
+                <div class="text-gray-800 leading-relaxed" id="ai-feedback-text">
+                    ${data.ai_feedback}
+                </div>
+                <button onclick="translateText('ai-feedback-text', '${data.ai_feedback.replace(/'/g, "\\'")}', 'en', 'es')" 
+                        class="mt-2 bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200 transition text-sm">
+                    🌐 Translate Feedback
+                </button>
+            </div>
+    `;
+    
+    // Add corrections if any
+    if (data.corrections && data.corrections.length > 0) {
+        feedbackHtml += `
+            <div class="mb-4">
+                <h5 class="font-semibold text-red-700 mb-2">📝 Grammar & Style Corrections:</h5>
+                <div class="space-y-2">
+        `;
+        
+        data.corrections.forEach((correction, index) => {
+            feedbackHtml += `
+                <div class="bg-red-50 p-3 rounded border border-red-200">
+                    <div class="text-sm">
+                        <span class="text-red-600 line-through">"${correction.original}"</span>
+                        <span class="text-green-600 font-medium"> → "${correction.corrected}"</span>
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">${correction.explanation}</div>
+                </div>
+            `;
+        });
+        
+        feedbackHtml += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add new vocabulary if any
+    if (data.new_vocabulary && data.new_vocabulary.length > 0) {
+        feedbackHtml += `
+            <div class="mb-4">
+                <h5 class="font-semibold text-blue-700 mb-2">📚 New Vocabulary Learned:</h5>
+                <div class="space-y-2">
+        `;
+        
+        data.new_vocabulary.forEach(vocab => {
+            feedbackHtml += `
+                <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                    <div class="font-medium text-blue-800">${vocab.word}</div>
+                    <div class="text-sm text-blue-700">${vocab.definition}</div>
+                    ${vocab.example ? `<div class="text-xs text-blue-600 italic mt-1">"${vocab.example}"</div>` : ''}
+                </div>
+            `;
+        });
+        
+        feedbackHtml += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add suggestions if any
+    if (data.suggestions) {
+        feedbackHtml += `
+            <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
+                <div class="text-sm text-yellow-800">
+                    <strong>💡 Suggestions:</strong> ${data.suggestions}
+                </div>
+            </div>
+        `;
+    }
+    
+    feedbackHtml += `</div>`;
+    
+    feedbackArea.innerHTML = feedbackHtml;
+    
+    // Scroll to feedback
+    feedbackArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function nextStep() {
+    currentStep++;
+    
+    // Hide feedback area
+    document.getElementById('feedback-area').classList.add('hidden');
+    document.getElementById('next-step-btn').classList.add('hidden');
+    
+    loadCurrentStep();
+}
+
+function previousStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        loadCurrentStep();
+    }
+}
+
+async function completeStory() {
+    showLoading('Generating your completion report...');
+    
+    try {
+        const response = await fetch(`/stories/${currentStory.id}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        showCompletionModal(data);
+        
+    } catch (error) {
+        hideLoading();
+        alert('Error completing story: ' + error.message);
+    }
+}
+
+function showCompletionModal(completionData) {
+    const modal = document.getElementById('completion-modal');
+    const content = document.getElementById('completion-content');
+    
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div class="text-lg text-gray-700">${completionData.congratulations_message}</div>
+            
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-blue-50 p-4 rounded">
+                    <div class="font-medium text-blue-800">Total Interactions</div>
+                    <div class="text-2xl font-bold text-blue-600">${completionData.total_interactions}</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded">
+                    <div class="font-medium text-green-800">Average Score</div>
+                    <div class="text-2xl font-bold text-green-600">${completionData.average_score}/100</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded">
+                    <div class="font-medium text-red-800">Corrections Made</div>
+                    <div class="text-2xl font-bold text-red-600">${completionData.total_corrections}</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded">
+                    <div class="font-medium text-purple-800">New Vocabulary</div>
+                    <div class="text-2xl font-bold text-purple-600">${completionData.new_vocabulary_learned}</div>
+                </div>
+            </div>
+            
+            ${completionData.next_recommendations ? `
+                <div class="text-left">
+                    <h4 class="font-semibold text-gray-800 mb-2">🚀 What's Next?</h4>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        ${completionData.next_recommendations.map(rec => `<li>• ${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+function updateProgressBar(percentage) {
+    const progressBar = document.querySelector('.bg-blue-600');
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+    }
+}
+
+function updateNavigation() {
+    const prevBtn = document.getElementById('prev-step-btn');
+    const nextBtn = document.getElementById('next-step-btn');
+    
+    // Update previous button
+    prevBtn.disabled = currentStep <= 1;
+    
+    // Update step display if progress exists
+    const stepDisplay = document.querySelector('.text-sm.text-gray-600');
+    if (stepDisplay && stepDisplay.textContent.includes('Step')) {
+        stepDisplay.textContent = `Step ${currentStep} of ${currentStory.total_steps || currentStory.steps?.length || 1}`;
+    }
+}
+
+// Utility functions
+function clearResponse() {
+    document.getElementById('user-response').value = '';
+    updateWordCount();
+}
+
+function retryStory() {
+    location.reload();
+}
+
+function showLoading(message) {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('loading-modal').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loading-modal').classList.add('hidden');
+}
+
+// Translation functions
+async function translateText(elementId, text, fromLang, toLang) {
+    const button = event.target;
+    const translationElement = document.getElementById(`${elementId}-${toLang}`);
+    
+    // Check if already translated
+    if (translationElement && !translationElement.classList.contains('hidden')) {
+        translationElement.classList.add('hidden');
+        button.textContent = button.textContent.replace('Hide', 'Translate');
+        return;
+    }
+    
+    // Show loading
+    const originalText = button.textContent;
+    button.textContent = '🔄 Translating...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`);
+        const data = await response.json();
+        
+        if (data.responseStatus === 200) {
+            // Show translation
+            if (!translationElement) {
+                // Create translation element
+                const parentElement = document.getElementById(elementId);
+                const newElement = document.createElement('div');
+                newElement.id = `${elementId}-${toLang}`;
+                newElement.className = 'text-blue-600 text-sm mt-2 italic border-t border-gray-200 pt-2';
+                newElement.innerHTML = `🇪🇸 ${data.responseData.translatedText}`;
+                parentElement.parentNode.insertBefore(newElement, parentElement.nextSibling);
+            } else {
+                translationElement.innerHTML = `🇪🇸 ${data.responseData.translatedText}`;
+                translationElement.classList.remove('hidden');
+            }
+            
+            button.textContent = '🌐 Hide Translation';
+        } else {
+            throw new Error('Translation failed');
+        }
+    } catch (error) {
+        console.error('Translation error:', error);
+        button.textContent = '⚠️ Translation failed';
+    }
+    
+    button.disabled = false;
+}
+
+async function translateStepContent(stepNumber, text, type) {
+    const elementId = type === 'content' ? `step-content-${stepNumber}` : `step-question-${stepNumber}`;
+    await translateText(elementId, text, 'en', 'es');
+}
+
+// Add custom styles
+const style = document.createElement('style');
+style.textContent = `
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+    
+    .resize-none {
+        resize: none;
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}

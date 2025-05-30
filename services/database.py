@@ -97,8 +97,149 @@ class DatabaseService:
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )''')
         
+        # NEW: Stories table
+        c.execute('''CREATE TABLE IF NOT EXISTS stories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            content TEXT NOT NULL,
+            story_type TEXT DEFAULT 'generated',
+            scenario TEXT DEFAULT 'general',
+            difficulty_level TEXT DEFAULT 'intermediate',
+            topic TEXT DEFAULT 'software_development',
+            estimated_time INTEGER DEFAULT 10,
+            total_steps INTEGER DEFAULT 1,
+            learning_objectives TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT TRUE
+        )''')
+        
+        # NEW: Story steps table (for interactive stories)
+        c.execute('''CREATE TABLE IF NOT EXISTS story_steps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            step_number INTEGER NOT NULL,
+            step_type TEXT DEFAULT 'narrative',
+            content TEXT NOT NULL,
+            question TEXT,
+            expected_response_type TEXT DEFAULT 'open',
+            learning_focus TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (story_id) REFERENCES stories (id)
+        )''')
+        
+        # NEW: User story progress table
+        c.execute('''CREATE TABLE IF NOT EXISTS user_story_progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            current_step INTEGER DEFAULT 1,
+            is_completed BOOLEAN DEFAULT FALSE,
+            total_interactions INTEGER DEFAULT 0,
+            completion_percentage REAL DEFAULT 0.0,
+            time_spent INTEGER DEFAULT 0,
+            last_interaction DATETIME DEFAULT CURRENT_TIMESTAMP,
+            started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            completed_at DATETIME,
+            FOREIGN KEY (story_id) REFERENCES stories (id)
+        )''')
+        
+        # NEW: Story interactions table
+        c.execute('''CREATE TABLE IF NOT EXISTS story_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            step_number INTEGER NOT NULL,
+            user_response TEXT NOT NULL,
+            ai_feedback TEXT,
+            corrections TEXT,
+            new_vocabulary TEXT,
+            interaction_score REAL DEFAULT 0.0,
+            response_time INTEGER DEFAULT 0,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (story_id) REFERENCES stories (id)
+        )''')
+        
+        # NEW: Story templates table (for AI generation)
+        c.execute('''CREATE TABLE IF NOT EXISTS story_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            scenario TEXT NOT NULL,
+            difficulty_level TEXT NOT NULL,
+            template_structure TEXT NOT NULL,
+            variables TEXT,
+            learning_objectives TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT TRUE
+        )''')
+        
+        conn.commit()
+        
+        # Insert default story templates if they don't exist
+        self._insert_default_story_templates(c)
         conn.commit()
         conn.close()
+    
+    def _insert_default_story_templates(self, cursor):
+        """Insert default story templates for AI generation"""
+        default_templates = [
+            {
+                'name': 'Bug Hunt Adventure',
+                'scenario': 'debugging_session',
+                'difficulty_level': 'intermediate',
+                'template_structure': json.dumps({
+                    'intro': 'A critical bug has been discovered in production...',
+                    'steps': [
+                        {'type': 'narrative', 'content': 'Describe the bug symptoms'},
+                        {'type': 'question', 'content': 'What would be your first debugging step?'},
+                        {'type': 'narrative', 'content': 'Investigation process'},
+                        {'type': 'question', 'content': 'How would you communicate this to stakeholders?'},
+                        {'type': 'resolution', 'content': 'Bug resolution and lessons learned'}
+                    ]
+                }),
+                'variables': json.dumps(['bug_type', 'system_component', 'urgency_level']),
+                'learning_objectives': json.dumps(['technical vocabulary', 'problem-solving communication', 'stakeholder updates'])
+            },
+            {
+                'name': 'Code Review Drama',
+                'scenario': 'code_review',
+                'difficulty_level': 'advanced',
+                'template_structure': json.dumps({
+                    'intro': 'You need to review a complex pull request...',
+                    'steps': [
+                        {'type': 'narrative', 'content': 'Analyzing the code changes'},
+                        {'type': 'question', 'content': 'How would you provide constructive feedback?'},
+                        {'type': 'dialogue', 'content': 'Discussion with the developer'},
+                        {'type': 'question', 'content': 'How do you handle disagreements?'},
+                        {'type': 'conclusion', 'content': 'Reaching consensus and approval'}
+                    ]
+                }),
+                'variables': json.dumps(['code_complexity', 'team_member', 'review_type']),
+                'learning_objectives': json.dumps(['diplomatic language', 'technical feedback', 'conflict resolution'])
+            },
+            {
+                'name': 'Interview Challenge',
+                'scenario': 'technical_interview',
+                'difficulty_level': 'beginner',
+                'template_structure': json.dumps({
+                    'intro': 'You are interviewing for a software developer position...',
+                    'steps': [
+                        {'type': 'question', 'content': 'Tell me about yourself'},
+                        {'type': 'technical', 'content': 'Explain a technical concept'},
+                        {'type': 'behavioral', 'content': 'Describe a challenging project'},
+                        {'type': 'scenario', 'content': 'How would you handle a difficult situation?'},
+                        {'type': 'closing', 'content': 'Questions for the interviewer'}
+                    ]
+                }),
+                'variables': json.dumps(['company_type', 'position_level', 'technology_stack']),
+                'learning_objectives': json.dumps(['self-presentation', 'technical explanations', 'question asking'])
+            }
+        ]
+        
+        for template in default_templates:
+            cursor.execute('''INSERT OR IGNORE INTO story_templates 
+                             (name, scenario, difficulty_level, template_structure, variables, learning_objectives)
+                             VALUES (?, ?, ?, ?, ?, ?)''',
+                          (template['name'], template['scenario'], template['difficulty_level'],
+                           template['template_structure'], template['variables'], template['learning_objectives']))
     
     def save_conversation(self, user_message, ai_response, corrections, scenario):
         """Save a conversation with corrections to the database"""
@@ -185,6 +326,254 @@ class DatabaseService:
         conn.commit()
         conn.close()
     
+    # NEW: Stories database methods
+    def save_story(self, title, description, content, story_type='generated', scenario='general', 
+                   difficulty_level='intermediate', topic='software_development', estimated_time=10,
+                   learning_objectives=None):
+        """Save a new story to the database"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''INSERT INTO stories 
+                     (title, description, content, story_type, scenario, difficulty_level, 
+                      topic, estimated_time, learning_objectives)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                  (title, description, content, story_type, scenario, difficulty_level,
+                   topic, estimated_time, json.dumps(learning_objectives) if learning_objectives else None))
+        
+        story_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return story_id
+    
+    def save_story_steps(self, story_id, steps):
+        """Save story steps for interactive stories"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        for i, step in enumerate(steps, 1):
+            c.execute('''INSERT INTO story_steps 
+                         (story_id, step_number, step_type, content, question, 
+                          expected_response_type, learning_focus)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                      (story_id, i, step.get('type', 'narrative'), step.get('content', ''),
+                       step.get('question', ''), step.get('expected_response_type', 'open'),
+                       step.get('learning_focus', '')))
+        
+        # Update total steps in stories table
+        c.execute('''UPDATE stories SET total_steps = ? WHERE id = ?''', (len(steps), story_id))
+        
+        conn.commit()
+        conn.close()
+    
+    def get_stories_list(self, limit=20):
+        """Get list of available stories"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''SELECT id, title, description, scenario, difficulty_level, topic, 
+                            estimated_time, total_steps, created_at
+                     FROM stories 
+                     WHERE is_active = TRUE
+                     ORDER BY created_at DESC 
+                     LIMIT ?''', (limit,))
+        
+        stories = c.fetchall()
+        conn.close()
+        return stories
+    
+    def get_story_by_id(self, story_id):
+        """Get a specific story by ID"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''SELECT * FROM stories WHERE id = ? AND is_active = TRUE''', (story_id,))
+        story_row = c.fetchone()
+        
+        if not story_row:
+            conn.close()
+            return None
+        
+        # Convert to dictionary
+        story = dict(zip([col[0] for col in c.description], story_row))
+        
+        # Parse learning_objectives JSON if it exists
+        if story.get('learning_objectives'):
+            try:
+                story['learning_objectives'] = json.loads(story['learning_objectives'])
+            except (json.JSONDecodeError, TypeError):
+                story['learning_objectives'] = []
+        else:
+            story['learning_objectives'] = []
+        
+        # Get story steps
+        c.execute('''SELECT * FROM story_steps WHERE story_id = ? ORDER BY step_number''', (story_id,))
+        steps_rows = c.fetchall()
+        
+        story['steps'] = []
+        for step_row in steps_rows:
+            step = dict(zip([col[0] for col in c.description], step_row))
+            story['steps'].append(step)
+        
+        conn.close()
+        return story
+    
+    def save_story_interaction(self, story_id, step_number, user_response, ai_feedback=None, 
+                              corrections=None, new_vocabulary=None, interaction_score=0.0, response_time=0):
+        """Save user interaction with a story step"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''INSERT INTO story_interactions 
+                     (story_id, step_number, user_response, ai_feedback, corrections, 
+                      new_vocabulary, interaction_score, response_time)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                  (story_id, step_number, user_response, ai_feedback,
+                   json.dumps(corrections) if corrections else None,
+                   json.dumps(new_vocabulary) if new_vocabulary else None,
+                   interaction_score, response_time))
+        
+        interaction_id = c.lastrowid
+        
+        # Update user progress
+        self._update_story_progress(c, story_id, step_number)
+        
+        conn.commit()
+        conn.close()
+        return interaction_id
+    
+    def _update_story_progress(self, cursor, story_id, current_step):
+        """Update user progress for a story"""
+        # Check if progress record exists
+        cursor.execute('''SELECT id, total_interactions FROM user_story_progress 
+                         WHERE story_id = ?''', (story_id,))
+        progress = cursor.fetchone()
+        
+        if progress:
+            # Update existing progress
+            cursor.execute('''UPDATE user_story_progress 
+                             SET current_step = ?, total_interactions = total_interactions + 1,
+                                 last_interaction = CURRENT_TIMESTAMP
+                             WHERE story_id = ?''', (current_step, story_id))
+        else:
+            # Create new progress record
+            cursor.execute('''INSERT INTO user_story_progress 
+                             (story_id, current_step, total_interactions)
+                             VALUES (?, ?, 1)''', (story_id, current_step))
+        
+        # Calculate completion percentage
+        cursor.execute('''SELECT total_steps FROM stories WHERE id = ?''', (story_id,))
+        total_steps = cursor.fetchone()[0]
+        completion_percentage = (current_step / total_steps) * 100 if total_steps > 0 else 0
+        
+        cursor.execute('''UPDATE user_story_progress 
+                         SET completion_percentage = ? WHERE story_id = ?''', 
+                      (completion_percentage, story_id))
+    
+    def get_user_story_progress(self):
+        """Get user progress for all stories"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''SELECT story_id, current_step, is_completed, completion_percentage,
+                            total_interactions, last_interaction
+                     FROM user_story_progress''')
+        
+        progress_data = {}
+        for row in c.fetchall():
+            progress_data[row[0]] = {
+                'current_step': row[1],
+                'is_completed': row[2],
+                'completion_percentage': row[3],
+                'total_interactions': row[4],
+                'last_interaction': row[5]
+            }
+        
+        conn.close()
+        return progress_data
+    
+    def get_story_progress(self, story_id):
+        """Get user progress for a specific story"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''SELECT * FROM user_story_progress WHERE story_id = ?''', (story_id,))
+        progress_row = c.fetchone()
+        
+        progress = None
+        if progress_row:
+            progress = dict(zip([col[0] for col in c.description], progress_row))
+        
+        conn.close()
+        return progress
+    
+    def get_story_interactions(self, story_id, limit=50):
+        """Get user interactions for a specific story"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''SELECT * FROM story_interactions 
+                     WHERE story_id = ? 
+                     ORDER BY timestamp DESC 
+                     LIMIT ?''', (story_id, limit))
+        
+        interactions = []
+        for row in c.fetchall():
+            interaction = dict(zip([col[0] for col in c.description], row))
+            # Parse JSON fields
+            if interaction['corrections']:
+                interaction['corrections'] = json.loads(interaction['corrections'])
+            if interaction['new_vocabulary']:
+                interaction['new_vocabulary'] = json.loads(interaction['new_vocabulary'])
+            interactions.append(interaction)
+        
+        conn.close()
+        return interactions
+    
+    def complete_story(self, story_id):
+        """Mark a story as completed"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        c.execute('''UPDATE user_story_progress 
+                     SET is_completed = TRUE, completion_percentage = 100.0,
+                         completed_at = CURRENT_TIMESTAMP
+                     WHERE story_id = ?''', (story_id,))
+        
+        conn.commit()
+        conn.close()
+    
+    def get_story_templates(self, scenario=None, difficulty_level=None):
+        """Get story templates for AI generation"""
+        conn = self.get_connection()
+        c = conn.cursor()
+        
+        query = '''SELECT * FROM story_templates WHERE is_active = TRUE'''
+        params = []
+        
+        if scenario:
+            query += ' AND scenario = ?'
+            params.append(scenario)
+        
+        if difficulty_level:
+            query += ' AND difficulty_level = ?'
+            params.append(difficulty_level)
+        
+        query += ' ORDER BY created_at DESC'
+        
+        c.execute(query, params)
+        templates = []
+        for row in c.fetchall():
+            template = dict(zip([col[0] for col in c.description], row))
+            # Parse JSON fields
+            template['template_structure'] = json.loads(template['template_structure'])
+            template['variables'] = json.loads(template['variables']) if template['variables'] else []
+            template['learning_objectives'] = json.loads(template['learning_objectives']) if template['learning_objectives'] else []
+            templates.append(template)
+        
+        conn.close()
+        return templates
+    
     def get_user_analytics(self):
         """Get comprehensive user analytics"""
         conn = self.get_connection()
@@ -221,6 +610,13 @@ class DatabaseService:
                      WHERE date(timestamp) >= date('now', '-7 days')''')
         quiz_stats = c.fetchone()
         
+        # NEW: Story statistics
+        c.execute('''SELECT COUNT(*) FROM user_story_progress WHERE is_completed = TRUE''')
+        completed_stories = c.fetchone()[0]
+        
+        c.execute('''SELECT AVG(completion_percentage) FROM user_story_progress''')
+        avg_story_completion = c.fetchone()[0] or 0
+        
         conn.close()
         
         return {
@@ -231,6 +627,10 @@ class DatabaseService:
             'quiz_stats': {
                 'avg_score': quiz_stats[0] or 0,
                 'total_quizzes': quiz_stats[1] or 0
+            },
+            'story_stats': {
+                'completed_stories': completed_stories,
+                'avg_completion': avg_story_completion
             }
         }
     

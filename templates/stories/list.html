@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold gradient-text mb-4">📚 Interactive Software Stories</h2>
+        <p class="text-xl text-gray-600">Learn English through engaging software development scenarios</p>
+        <p class="text-sm text-gray-500 mt-2">Practice real workplace situations while improving your technical English</p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center space-x-4">
+                <span class="text-2xl">⚡</span>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">Quick Actions</h3>
+                    <p class="text-gray-600 text-sm">Create or generate new stories</p>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="showCreateStoryModal()" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    ✍️ Create Story
+                </button>
+                <button onclick="showGenerateStoryModal()" 
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    🤖 AI Generate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter and Search -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="grid md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Scenario</label>
+                <select id="scenario-filter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Scenarios</option>
+                    <option value="daily_standup">Daily Standup</option>
+                    <option value="code_review">Code Review</option>
+                    <option value="technical_interview">Technical Interview</option>
+                    <option value="debugging_session">Debugging Session</option>
+                    <option value="project_planning">Project Planning</option>
+                    <option value="client_meeting">Client Meeting</option>
+                    <option value="architecture_discussion">Architecture Discussion</option>
+                    <option value="deployment_issue">Deployment Issue</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                <select id="difficulty-filter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Levels</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Progress</label>
+                <select id="progress-filter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Stories</option>
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input type="text" id="search-input" placeholder="Search stories..." 
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+        <div class="mt-4 flex justify-between items-center">
+            <button onclick="clearFilters()" 
+                    class="text-gray-600 hover:text-gray-800 text-sm">
+                🔄 Clear Filters
+            </button>
+            <div class="text-sm text-gray-600">
+                <span id="stories-count">{{ stories|length }}</span> stories available
+            </div>
+        </div>
+    </div>
+
+    <!-- Stories Grid -->
+    <div id="stories-container" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for story in stories %}
+        <div class="story-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden transform hover:-translate-y-1"
+             data-scenario="{{ story.scenario }}" 
+             data-difficulty="{{ story.difficulty_level }}"
+             data-progress="{% if user_progress.get(story.id) %}{% if user_progress[story.id]['is_completed'] %}completed{% else %}in_progress{% endif %}{% else %}not_started{% endif %}">
+            
+            <!-- Story Header -->
+            <div class="relative">
+                <!-- Difficulty Badge -->
+                <div class="absolute top-4 right-4 z-10">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                        {% if story.difficulty_level == 'beginner' %}bg-green-100 text-green-800
+                        {% elif story.difficulty_level == 'intermediate' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ story.difficulty_level.title() }}
+                    </span>
+                </div>
+
+                <!-- Progress Badge -->
+                {% if user_progress.get(story.id) %}
+                <div class="absolute top-4 left-4 z-10">
+                    {% if user_progress[story.id]['is_completed'] %}
+                    <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        ✅ Completed
+                    </span>
+                    {% else %}
+                    <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        🔄 {{ user_progress[story.id]['completion_percentage']|round }}%
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Scenario Background -->
+                <div class="h-32 bg-gradient-to-br 
+                    {% if story.scenario == 'debugging_session' %}from-red-400 to-red-600
+                    {% elif story.scenario == 'code_review' %}from-blue-400 to-blue-600
+                    {% elif story.scenario == 'technical_interview' %}from-purple-400 to-purple-600
+                    {% elif story.scenario == 'daily_standup' %}from-green-400 to-green-600
+                    {% elif story.scenario == 'project_planning' %}from-yellow-400 to-yellow-600
+                    {% elif story.scenario == 'client_meeting' %}from-indigo-400 to-indigo-600
+                    {% elif story.scenario == 'architecture_discussion' %}from-teal-400 to-teal-600
+                    {% elif story.scenario == 'deployment_issue' %}from-orange-400 to-orange-600
+                    {% else %}from-gray-400 to-gray-600{% endif %}
+                    flex items-center justify-center">
+                    
+                    <div class="text-center text-white">
+                        <div class="text-3xl mb-2">
+                            {% if story.scenario == 'debugging_session' %}🐛
+                            {% elif story.scenario == 'code_review' %}🔍
+                            {% elif story.scenario == 'technical_interview' %}💼
+                            {% elif story.scenario == 'daily_standup' %}📅
+                            {% elif story.scenario == 'project_planning' %}📋
+                            {% elif story.scenario == 'client_meeting' %}🤝
+                            {% elif story.scenario == 'architecture_discussion' %}🏗️
+                            {% elif story.scenario == 'deployment_issue' %}🚀
+                            {% else %}📚{% endif %}
+                        </div>
+                        <div class="text-sm font-medium capitalize">
+                            {{ story.scenario.replace('_', ' ') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Story Content -->
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2">{{ story.title }}</h3>
+                <p class="text-gray-600 text-sm mb-4 line-clamp-3">{{ story.description or 'An interactive story to improve your English in professional scenarios.' }}</p>
+                
+                <!-- Story Details -->
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <div class="flex items-center space-x-4">
+                        <span class="flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            {{ story.estimated_time }}min
+                        </span>
+                        <span class="flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            {{ story.total_steps }} steps
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-2">
+                    {% if user_progress.get(story.id) and not user_progress[story.id]['is_completed'] %}
+                    <a href="/stories/{{ story.id }}" 
+                       class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        📖 Continue
+                    </a>
+                    {% elif user_progress.get(story.id) and user_progress[story.id]['is_completed'] %}
+                    <a href="/stories/{{ story.id }}" 
+                       class="flex-1 bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        🔄 Review
+                    </a>
+                    {% else %}
+                    <a href="/stories/{{ story.id }}" 
+                       class="flex-1 bg-purple-600 text-white text-center py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                        🚀 Start
+                    </a>
+                    {% endif %}
+                    
+                    <button onclick="showStoryPreview({{ story.id }})" 
+                            class="bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                        👁️
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden text-center py-12">
+        <div class="text-6xl mb-4">📚</div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No stories found</h3>
+        <p class="text-gray-600 mb-6">Try adjusting your filters or create a new story</p>
+        <button onclick="clearFilters()" 
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            Clear Filters
+        </button>
+    </div>
+
+    <!-- Pagination (if needed) -->
+    {% if stories|length >= 20 %}
+    <div class="text-center">
+        <button class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+            Load More Stories
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Story Modal -->
+<div id="create-story-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-gray-800">✍️ Create New Story</h3>
+                <button onclick="hideCreateStoryModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <form id="create-story-form" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Story Title</label>
+                <input type="text" id="story-title" required
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Enter an engaging title for your story">
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Scenario</label>
+                    <select id="story-scenario" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="daily_standup">Daily Standup</option>
+                        <option value="code_review">Code Review</option>
+                        <option value="technical_interview">Technical Interview</option>
+                        <option value="debugging_session">Debugging Session</option>
+                        <option value="project_planning">Project Planning</option>
+                        <option value="client_meeting">Client Meeting</option>
+                        <option value="architecture_discussion">Architecture Discussion</option>
+                        <option value="deployment_issue">Deployment Issue</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                    <select id="story-difficulty" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Story Content</label>
+                <textarea id="story-content" required rows="6"
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Write your story content here. Describe the scenario, setting, and situation that learners will engage with..."></textarea>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Create Story
+                </button>
+                <button type="button" onclick="hideCreateStoryModal()" 
+                        class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- AI Generate Story Modal -->
+<div id="generate-story-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-gray-800">🤖 AI Story Generator</h3>
+                <button onclick="hideGenerateStoryModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <form id="generate-story-form" class="p-6 space-y-4">
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Topic</label>
+                    <select id="ai-topic" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="software_development">Software Development</option>
+                        <option value="web_development">Web Development</option>
+                        <option value="mobile_development">Mobile Development</option>
+                        <option value="devops">DevOps & Deployment</option>
+                        <option value="data_science">Data Science</option>
+                        <option value="cybersecurity">Cybersecurity</option>
+                        <option value="ai_ml">AI & Machine Learning</option>
+                        <option value="startup">Tech Startup</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Scenario</label>
+                    <select id="ai-scenario" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="daily_standup">Daily Standup</option>
+                        <option value="code_review">Code Review</option>
+                        <option value="technical_interview">Technical Interview</option>
+                        <option value="debugging_session">Debugging Session</option>
+                        <option value="project_planning">Project Planning</option>
+                        <option value="client_meeting">Client Meeting</option>
+                        <option value="architecture_discussion">Architecture Discussion</option>
+                        <option value="deployment_issue">Deployment Issue</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                    <select id="ai-difficulty" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Story Length</label>
+                    <select id="ai-length" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="short">Short (5-10 min)</option>
+                        <option value="medium">Medium (10-15 min)</option>
+                        <option value="long">Long (15-25 min)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Focus Areas (Optional)</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" value="technical_vocabulary" class="focus-area-checkbox mr-2">
+                        <span class="text-sm">Technical Vocabulary</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="communication_skills" class="focus-area-checkbox mr-2">
+                        <span class="text-sm">Communication Skills</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="problem_solving" class="focus-area-checkbox mr-2">
+                        <span class="text-sm">Problem Solving</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="presentation_skills" class="focus-area-checkbox mr-2">
+                        <span class="text-sm">Presentation Skills</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    🤖 Generate Story
+                </button>
+                <button type="button" onclick="hideGenerateStoryModal()" 
+                        class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loading-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 text-center">
+        <div class="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Creating Your Story</h3>
+        <p class="text-gray-600" id="loading-message">Please wait while we generate your interactive story...</p>
+    </div>
+</div>
+
+<script>
+// Filter functionality
+function filterStories() {
+    const scenario = document.getElementById('scenario-filter').value;
+    const difficulty = document.getElementById('difficulty-filter').value;
+    const progress = document.getElementById('progress-filter').value;
+    const search = document.getElementById('search-input').value.toLowerCase();
+    
+    const storyCards = document.querySelectorAll('.story-card');
+    let visibleCount = 0;
+    
+    storyCards.forEach(card => {
+        const cardScenario = card.dataset.scenario;
+        const cardDifficulty = card.dataset.difficulty;
+        const cardProgress = card.dataset.progress;
+        const cardText = card.textContent.toLowerCase();
+        
+        const matchesScenario = !scenario || cardScenario === scenario;
+        const matchesDifficulty = !difficulty || cardDifficulty === difficulty;
+        const matchesProgress = !progress || cardProgress === progress;
+        const matchesSearch = !search || cardText.includes(search);
+        
+        if (matchesScenario && matchesDifficulty && matchesProgress && matchesSearch) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update count
+    document.getElementById('stories-count').textContent = visibleCount;
+    
+    // Show/hide empty state
+    const emptyState = document.getElementById('empty-state');
+    const storiesContainer = document.getElementById('stories-container');
+    
+    if (visibleCount === 0) {
+        emptyState.classList.remove('hidden');
+        storiesContainer.classList.add('hidden');
+    } else {
+        emptyState.classList.add('hidden');
+        storiesContainer.classList.remove('hidden');
+    }
+}
+
+function clearFilters() {
+    document.getElementById('scenario-filter').value = '';
+    document.getElementById('difficulty-filter').value = '';
+    document.getElementById('progress-filter').value = '';
+    document.getElementById('search-input').value = '';
+    filterStories();
+}
+
+// Modal functions
+function showCreateStoryModal() {
+    document.getElementById('create-story-modal').classList.remove('hidden');
+}
+
+function hideCreateStoryModal() {
+    document.getElementById('create-story-modal').classList.add('hidden');
+    document.getElementById('create-story-form').reset();
+}
+
+function showGenerateStoryModal() {
+    document.getElementById('generate-story-modal').classList.remove('hidden');
+}
+
+function hideGenerateStoryModal() {
+    document.getElementById('generate-story-modal').classList.add('hidden');
+    document.getElementById('generate-story-form').reset();
+}
+
+function showLoading(message = 'Please wait...') {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('loading-modal').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loading-modal').classList.add('hidden');
+}
+
+// Form submissions
+document.getElementById('create-story-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        story_type: 'manual',
+        title: document.getElementById('story-title').value,
+        content: document.getElementById('story-content').value,
+        scenario: document.getElementById('story-scenario').value,
+        difficulty: document.getElementById('story-difficulty').value
+    };
+    
+    showLoading('Creating your story...');
+    hideCreateStoryModal();
+    
+    try {
+        const response = await fetch('/stories/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirect to the new story
+            window.location.href = `/stories/${data.story_id}`;
+        } else {
+            throw new Error(data.error || 'Failed to create story');
+        }
+    } catch (error) {
+        hideLoading();
+        alert('Error creating story: ' + error.message);
+        showCreateStoryModal();
+    }
+});
+
+document.getElementById('generate-story-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Get focus areas
+    const focusAreas = Array.from(document.querySelectorAll('.focus-area-checkbox:checked'))
+                          .map(cb => cb.value);
+    
+    const formData = {
+        topic: document.getElementById('ai-topic').value,
+        scenario: document.getElementById('ai-scenario').value,
+        difficulty: document.getElementById('ai-difficulty').value,
+        length: document.getElementById('ai-length').value,
+        focus_areas: focusAreas
+    };
+    
+    showLoading('AI is generating your personalized story...');
+    hideGenerateStoryModal();
+    
+    try {
+        const response = await fetch('/stories/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.id) {
+            // Redirect to the new story
+            window.location.href = `/stories/${data.id}`;
+        } else {
+            throw new Error(data.error || 'Failed to generate story');
+        }
+    } catch (error) {
+        hideLoading();
+        alert('Error generating story: ' + error.message);
+        showGenerateStoryModal();
+    }
+});
+
+// Preview functionality (placeholder)
+function showStoryPreview(storyId) {
+    // This would show a preview modal with story details
+    alert(`Preview for story ${storyId} - Feature coming soon!`);
+}
+
+// Event listeners
+document.getElementById('scenario-filter').addEventListener('change', filterStories);
+document.getElementById('difficulty-filter').addEventListener('change', filterStories);
+document.getElementById('progress-filter').addEventListener('change', filterStories);
+document.getElementById('search-input').addEventListener('input', filterStories);
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Add entrance animations
+    const cards = document.querySelectorAll('.story-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Add custom styles
+const style = document.createElement('style');
+style.textContent = `
+    .gradient-text {
+        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .story-card {
+        transition: all 0.3s ease;
+    }
+    
+    .story-card:hover {
+        transform: translateY(-4px);
+    }
+    
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}
