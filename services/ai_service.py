@@ -1,5 +1,6 @@
 import json
 import requests
+import time
 from config import Config
 
 class DeepSeekClient:
@@ -11,8 +12,8 @@ class DeepSeekClient:
             "Content-Type": "application/json"
         }
     
-    def chat_completions_create(self, model="deepseek-chat", messages=None, temperature=1.0, stream=False):
-        """Create a chat completion using DeepSeek API"""
+    def chat_completions_create(self, model="deepseek-chat", messages=None, temperature=1.0, stream=False, max_retries=3):
+        """Create a chat completion using DeepSeek API with retry logic"""
         if not self.api_key or self.api_key == "sk-dummy-key-replace-with-real-key":
             raise Exception("Invalid or missing API key. Please set DEEPSEEK_API_KEY in your .env file")
         
@@ -25,36 +26,64 @@ class DeepSeekClient:
             "stream": stream
         }
         
-        try:
-            # Reduced timeout and added retry logic
-            response = requests.post(url, headers=self.headers, json=payload, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            # Create a simple response object similar to OpenAI's format
-            class Choice:
-                def __init__(self, message_content):
-                    self.message = type('Message', (), {'content': message_content})()
-            
-            class ChatCompletion:
-                def __init__(self, choices):
-                    self.choices = choices
-            
-            return ChatCompletion([Choice(data['choices'][0]['message']['content'])])
-            
-        except requests.exceptions.Timeout:
-            print("⚠️ API request timed out after 10 seconds")
-            raise Exception(f"API request timed out. The AI service is taking too long to respond.")
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️ API request failed: {str(e)}")
-            raise Exception(f"API request failed: {str(e)}")
-        except KeyError as e:
-            print(f"⚠️ Unexpected API response format: {str(e)}")
-            raise Exception(f"Unexpected API response format: {str(e)}")
-        except Exception as e:
-            print(f"⚠️ Error calling DeepSeek API: {str(e)}")
-            raise Exception(f"Error calling DeepSeek API: {str(e)}")
+        # Increased timeouts with retry logic
+        for attempt in range(max_retries):
+            try:
+                print(f"🔄 Attempt {attempt + 1}/{max_retries} - Making API request...")
+                
+                # Progressive timeout: starts at 30s, increases with each retry
+                timeout = 30 + (attempt * 15)  # 30s, 45s, 60s
+                
+                response = requests.post(
+                    url, 
+                    headers=self.headers, 
+                    json=payload, 
+                    timeout=timeout
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Create response object
+                class Choice:
+                    def __init__(self, message_content):
+                        self.message = type('Message', (), {'content': message_content})()
+                
+                class ChatCompletion:
+                    def __init__(self, choices):
+                        self.choices = choices
+                
+                print(f"✅ API request successful on attempt {attempt + 1}")
+                return ChatCompletion([Choice(data['choices'][0]['message']['content'])])
+                
+            except requests.exceptions.Timeout:
+                print(f"⚠️ Timeout on attempt {attempt + 1} (waited {timeout}s)")
+                if attempt == max_retries - 1:
+                    raise Exception(f"API request timed out after {max_retries} attempts. The AI service is currently slow.")
+                
+                # Wait before retry (exponential backoff)
+                wait_time = 2 ** attempt  # 1s, 2s, 4s
+                print(f"⏳ Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+                continue
+                
+            except requests.exceptions.RequestException as e:
+                print(f"⚠️ API request failed on attempt {attempt + 1}: {str(e)}")
+                if attempt == max_retries - 1:
+                    raise Exception(f"API request failed after {max_retries} attempts: {str(e)}")
+                
+                # Wait before retry
+                wait_time = 2 ** attempt
+                print(f"⏳ Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+                continue
+                
+            except KeyError as e:
+                print(f"⚠️ Unexpected API response format: {str(e)}")
+                raise Exception(f"Unexpected API response format: {str(e)}")
+            except Exception as e:
+                print(f"⚠️ Error calling DeepSeek API: {str(e)}")
+                raise Exception(f"Error calling DeepSeek API: {str(e)}")
 
 class AIService:
     def __init__(self, db_service):
@@ -67,7 +96,7 @@ class AIService:
             self.client = None
     
     def analyze_english_with_deepseek(self, user_message, scenario):
-        """Analyze user's English and provide corrections and suggestions"""
+        """Analyze user's English with improved timeout handling"""
         if not self.client:
             return self._get_fallback_analysis(user_message, scenario)
         
@@ -106,13 +135,16 @@ IMPORTANT: You MUST respond with valid JSON in exactly this format:
 Do NOT include any other text before or after the JSON. Only return the JSON object."""
 
         try:
+            print(f"🔄 Analyzing message: '{user_message[:50]}...'")
+            
             response = self.client.chat_completions_create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message}
                 ],
-                temperature=1.0
+                temperature=1.0,
+                max_retries=2  # Reduced retries for faster fallback
             )
             
             # Get the response content
@@ -149,7 +181,8 @@ Do NOT include any other text before or after the JSON. Only return the JSON obj
                 # Ensure new_vocabulary is a list  
                 if not isinstance(result["new_vocabulary"], list):
                     result["new_vocabulary"] = []
-                    
+                
+                print("✅ AI analysis completed successfully")
                 return result
                 
             except (json.JSONDecodeError, ValueError) as e:
@@ -160,11 +193,17 @@ Do NOT include any other text before or after the JSON. Only return the JSON obj
                 return self._get_fallback_analysis(user_message, scenario, ai_response=content)
                 
         except Exception as e:
-            print(f"Error calling DeepSeek API: {e}")
-            return self._get_fallback_analysis(user_message, scenario, error=str(e))
+            print(f"❌ Error calling DeepSeek API: {e}")
+            
+            # Check if it's a timeout error
+            if "timed out" in str(e).lower() or "timeout" in str(e).lower():
+                print("🔄 Using fallback analysis due to timeout")
+                return self._get_fallback_analysis(user_message, scenario, error="timeout")
+            else:
+                return self._get_fallback_analysis(user_message, scenario, error=str(e))
     
     def generate_quiz_questions(self, user_mistakes, num_questions=5):
-        """Generate quiz questions based on user's common mistakes"""
+        """Generate quiz questions with timeout handling"""
         if not self.client:
             return []
         
@@ -201,10 +240,13 @@ Generate questions that are:
 Do NOT include any other text before or after the JSON."""
 
         try:
+            print(f"🔄 Generating quiz for mistake types: {mistake_types}")
+            
             response = self.client.chat_completions_create(
                 model="deepseek-chat",
                 messages=[{"role": "system", "content": system_prompt}],
-                temperature=0.7
+                temperature=0.7,
+                max_retries=2
             )
             
             content = response.choices[0].message.content.strip()
@@ -223,15 +265,16 @@ Do NOT include any other text before or after the JSON."""
             # Save questions to database
             if questions:
                 self.db_service.save_quiz_questions(questions)
+                print(f"✅ Generated {len(questions)} quiz questions")
             
             return questions
             
         except Exception as e:
-            print(f"Error generating quiz questions: {e}")
+            print(f"❌ Error generating quiz questions: {e}")
             return []
     
     def generate_story_with_ai(self, parameters):
-        """Generate an interactive story using AI based on user parameters"""
+        """Generate story with timeout handling"""
         if not self.client:
             return None
         
@@ -309,47 +352,16 @@ RESPONSE FORMAT - Return ONLY valid JSON:
     ]
 }}
 
-EXAMPLE for debugging_session:
-{{
-    "title": "Quick Bug Fix Challenge",
-    "description": "Help your teammate solve a critical login bug affecting users",
-    "content": "It's Tuesday afternoon when Sarah from the QA team rushes to your desk. 'We have a problem! Users can't log into the application - they're getting a 500 error. The client is asking for updates every 10 minutes. Can you help me figure this out?'",
-    "learning_objectives": ["technical problem solving", "professional communication"],
-    "estimated_time": 4,
-    "total_steps": 2,
-    "steps": [
-        {{
-            "step_number": 1,
-            "type": "question",
-            "content": "You open the server logs and see several database connection timeout errors.",
-            "question": "How would you explain to Sarah what you've found and what your next debugging steps will be?",
-            "expected_response_type": "open",
-            "learning_focus": "technical_communication"
-        }},
-        {{
-            "step_number": 2,
-            "type": "question",
-            "content": "After investigating, you discover the database connection pool is exhausted due to a recent code deployment.",
-            "question": "How would you communicate this finding to both Sarah and the development team, including your recommended solution?",
-            "expected_response_type": "open",
-            "learning_focus": "stakeholder_communication"
-        }}
-    ]
-}}
-
-IMPORTANT RULES:
-- Keep the main content brief and engaging
-- Each step MUST have both "content" and "question" if type is "question"
-- Questions should be specific and actionable
-- Focus on realistic workplace communication
-- Ensure the story flows logically from step to step
-- Always include exactly 2 steps for consistency"""
+Do NOT include any text before or after the JSON."""
 
         try:
+            print(f"🔄 Generating story with parameters: {parameters}")
+            
             response = self.client.chat_completions_create(
                 model="deepseek-chat",
                 messages=[{"role": "system", "content": system_prompt}],
-                temperature=0.8
+                temperature=0.8,
+                max_retries=2
             )
             
             content = response.choices[0].message.content.strip()
@@ -374,7 +386,7 @@ IMPORTANT RULES:
                 story_data['steps'] = self._fix_story_steps(story_data.get('steps', []))
                 story_data['total_steps'] = len(story_data['steps'])
                 
-                print(f"AI generated story with {len(story_data['steps'])} steps")
+                print(f"✅ AI generated story with {len(story_data['steps'])} steps")
                 return story_data
                 
             except json.JSONDecodeError as e:
@@ -383,71 +395,11 @@ IMPORTANT RULES:
                 return None
                 
         except Exception as e:
-            print(f"Error generating story with AI: {e}")
+            print(f"❌ Error generating story with AI: {e}")
             return None
-        
-    def _validate_ai_story_data(self, story_data):
-        """Validate AI-generated story data structure"""
-        required_fields = ['title', 'content', 'steps']
-        
-        for field in required_fields:
-            if field not in story_data:
-                print(f"Missing required field: {field}")
-                return False
-        
-        # Validate steps
-        steps = story_data.get('steps', [])
-        if not isinstance(steps, list) or len(steps) == 0:
-            print("Steps must be a non-empty list")
-            return False
-        
-        for i, step in enumerate(steps):
-            if not isinstance(step, dict):
-                print(f"Step {i} is not a dictionary")
-                return False
-            
-            # Check required step fields
-            required_step_fields = ['type', 'content']
-            for field in required_step_fields:
-                if field not in step or not step[field]:
-                    print(f"Step {i} missing required field: {field}")
-                    return False
-            
-            # If it's a question type, it must have a question
-            if step.get('type') == 'question' and not step.get('question'):
-                print(f"Question step {i} missing question field")
-                return False
-        
-        return True
-    
-    def _fix_story_steps(self, steps):
-        """Fix and standardize story steps"""
-        fixed_steps = []
-        
-        for i, step in enumerate(steps):
-            fixed_step = {
-                'step_number': i + 1,
-                'type': step.get('type', 'question'),
-                'content': step.get('content', f'Continue with step {i + 1}...'),
-                'question': step.get('question'),
-                'expected_response_type': step.get('expected_response_type', 'open'),
-                'learning_focus': step.get('learning_focus', 'communication_skills')
-            }
-            
-            # Ensure question exists for question type steps
-            if fixed_step['type'] == 'question' and not fixed_step['question']:
-                fixed_step['question'] = f"How would you respond in this situation?"
-            
-            # Ensure content is not empty
-            if not fixed_step['content'] or len(fixed_step['content'].strip()) < 10:
-                fixed_step['content'] = f"Step {i + 1}: Consider your response to this professional scenario."
-            
-            fixed_steps.append(fixed_step)
-        
-        return fixed_steps
     
     def generate_ai_personal_report(self):
-        """Generate a comprehensive AI analysis report of the user's English skills"""
+        """Generate personal report with timeout handling"""
         if not self.client:
             return {
                 "strengths": ["Unable to analyze - AI service not available"],
@@ -522,10 +474,13 @@ Focus on software development communication contexts. Be specific and constructi
 Do NOT include any text before or after the JSON object."""
 
         try:
+            print("🔄 Generating AI personal report...")
+            
             response = self.client.chat_completions_create(
                 model="deepseek-chat",
                 messages=[{"role": "system", "content": system_prompt}],
-                temperature=0.7
+                temperature=0.7,
+                max_retries=2
             )
             
             content = response.choices[0].message.content.strip()
@@ -557,10 +512,11 @@ Do NOT include any text before or after the JSON object."""
                 if key not in report:
                     report[key] = default_report[key]
             
+            print("✅ AI personal report generated successfully")
             return report
             
         except Exception as e:
-            print(f"Error generating AI report: {e}")
+            print(f"❌ Error generating AI report: {e}")
             return {
                 "strengths": ["You're actively practicing English with AI feedback"],
                 "weaknesses": ["Unable to generate detailed analysis due to technical issues"],
@@ -572,6 +528,67 @@ Do NOT include any text before or after the JSON object."""
                 "learning_path": ["Practice daily conversations", "Focus on grammar quizzes"],
                 "personality_insights": ["Shows commitment to learning"]
             }
+    
+    def _validate_ai_story_data(self, story_data):
+        """Validate AI-generated story data structure"""
+        required_fields = ['title', 'content', 'steps']
+        
+        for field in required_fields:
+            if field not in story_data:
+                print(f"Missing required field: {field}")
+                return False
+        
+        # Validate steps
+        steps = story_data.get('steps', [])
+        if not isinstance(steps, list) or len(steps) == 0:
+            print("Steps must be a non-empty list")
+            return False
+        
+        for i, step in enumerate(steps):
+            if not isinstance(step, dict):
+                print(f"Step {i} is not a dictionary")
+                return False
+            
+            # Check required step fields
+            required_step_fields = ['type', 'content']
+            for field in required_step_fields:
+                if field not in step or not step[field]:
+                    print(f"Step {i} missing required field: {field}")
+                    return False
+            
+            # If it's a question type, it must have a question
+            if step.get('type') == 'question' and not step.get('question'):
+                print(f"Question step {i} missing question field")
+                return False
+        
+        return True
+    
+    def _fix_story_steps(self, steps):
+        """Fix and standardize story steps"""
+        fixed_steps = []
+        
+        for i, step in enumerate(steps):
+            fixed_step = {
+                'step_number': i + 1,
+                'type': step.get('type', 'question'),
+                'content': step.get('content', f'Continue with step {i + 1}...'),
+                'question': step.get('question'),
+                'expected_response_type': step.get('expected_response_type', 'open'),
+                'learning_focus': step.get('learning_focus', 'communication_skills')
+            }
+            
+            # Ensure question exists for question type steps
+            if fixed_step['type'] == 'question' and not fixed_step['question']:
+                fixed_step['question'] = f"How would you respond in this situation?"
+            
+            # Ensure content is not empty
+            if not fixed_step['content'] or len(fixed_step['content'].strip()) < 10:
+                fixed_step['content'] = f"Step {i + 1}: Consider your response to this professional scenario."
+            
+            fixed_steps.append(fixed_step)
+        
+        return fixed_steps
+    
     def _get_fallback_analysis(self, user_message, scenario, ai_response=None, error=None):
         """Provide fallback analysis when AI is unavailable"""
         print(f"🔄 Using fallback analysis for scenario: {scenario}")
