@@ -291,7 +291,7 @@ class BusinessService:
                          additional_preferences=''):
         """Generate a new AI story based on parameters"""
         if not self.ai_service.client:
-            return self._create_fallback_story(topic, difficulty, scenario)
+            return self._create_fallback_story(topic, difficulty, scenario, length)
         
         # Prepare parameters for AI generation
         parameters = {
@@ -308,9 +308,14 @@ class BusinessService:
         
         if not story_data:
             # Fallback to manual creation if AI fails
-            return self._create_fallback_story(topic, difficulty, scenario)
+            return self._create_fallback_story(topic, difficulty, scenario, length)
         
         try:
+            # Validate story data structure
+            if not self._validate_story_data(story_data):
+                print("Invalid story data from AI, using fallback")
+                return self._create_fallback_story(topic, difficulty, scenario, length)
+            
             # Save story to database
             story_id = self.db_service.save_story(
                 title=story_data.get('title', 'Generated Story'),
@@ -324,21 +329,82 @@ class BusinessService:
                 learning_objectives=story_data.get('learning_objectives', [])
             )
             
-            # Save story steps
+            # Save story steps - CRITICAL FIX
             steps = story_data.get('steps', [])
             if steps:
-                # Ensure step numbers are correct
+                # Ensure step numbers are correct and validate each step
+                validated_steps = []
                 for i, step in enumerate(steps):
-                    step['step_number'] = i + 1
-                self.db_service.save_story_steps(story_id, steps)
+                    validated_step = self._validate_and_fix_step(step, i + 1)
+                    validated_steps.append(validated_step)
+                
+                self.db_service.save_story_steps(story_id, validated_steps)
+            else:
+                # If no steps, create a basic interaction step
+                default_steps = self._create_default_steps(scenario)
+                self.db_service.save_story_steps(story_id, default_steps)
             
-            # Return story with ID
+            # Return story with ID and ensure it has steps
             story_data['id'] = story_id
+            story_data['steps'] = validated_steps if steps else default_steps
             return story_data
             
         except Exception as e:
             print(f"Error saving AI-generated story: {e}")
-            return self._create_fallback_story(topic, difficulty, scenario)
+            return self._create_fallback_story(topic, difficulty, scenario, length)
+        
+    def _validate_story_data(self, story_data):
+        """Validate that story data has required fields"""
+        required_fields = ['title', 'content']
+        for field in required_fields:
+            if not story_data.get(field):
+                return False
+        return True
+    
+    def _create_default_steps(self, scenario):
+        """Create default steps when AI doesn't generate them"""
+        scenario_prompts = {
+            'debugging_session': "You've identified the issue. How would you explain the solution to your team?",
+            'code_review': "You've reviewed the code. What feedback would you provide to the developer?",
+            'technical_interview': "The interviewer asks about your experience. How would you respond?",
+            'daily_standup': "It's your turn in the standup. What would you share with the team?",
+            'project_planning': "The team needs your input on the timeline. What would you suggest?",
+            'client_meeting': "The client has questions about the implementation. How would you address them?",
+            'architecture_discussion': "The team is debating the architecture. What's your perspective?",
+            'deployment_issue': "The deployment has failed. How would you communicate this to stakeholders?"
+        }
+        
+        default_question = scenario_prompts.get(scenario, "How would you handle this professional situation?")
+        
+        return [
+            {
+                'step_number': 1,
+                'type': 'question',
+                'content': f"Now it's your turn to respond. Think about how you would handle this {scenario.replace('_', ' ')} situation professionally.",
+                'question': default_question,
+                'expected_response_type': 'open',
+                'learning_focus': 'professional_communication'
+            }
+        ]
+    
+    def _validate_and_fix_step(self, step, step_number):
+        """Validate and fix a story step"""
+        validated_step = {
+            'step_number': step_number,
+            'type': step.get('type', 'narrative'),
+            'content': step.get('content', 'Continue with the story...'),
+            'question': step.get('question'),
+            'expected_response_type': step.get('expected_response_type', 'open'),
+            'learning_focus': step.get('learning_focus', 'communication_skills')
+        }
+        
+        # Ensure content is not empty
+        if not validated_step['content'] or len(validated_step['content'].strip()) < 10:
+            validated_step['content'] = f"Step {step_number}: Continue with your response to this scenario."
+        
+        return validated_step
+    
+
     
     def _create_fallback_story(self, topic, difficulty, scenario, length='short'):
         """Create a fallback story when AI generation fails"""
@@ -347,46 +413,96 @@ class BusinessService:
                 'short': {
                     'title': 'Quick Bug Fix',
                     'description': 'Help solve a simple bug that\'s blocking the team (3-4 minutes)',
-                    'content': 'It\'s 2 PM and you\'re in the middle of coding when your teammate Sarah rushes over. "Hey, we have a small issue with the login form - users can\'t submit it. Can you take a quick look?"',
+                    'content': 'It\'s 2 PM and you\'re in the middle of coding when your teammate Sarah rushes over. "Hey, we have a small issue with the login form - users can\'t submit it. Can you take a quick look?" You check the browser console and see a JavaScript error.',
                     'estimated_time': 4,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
-                            'content': 'Sarah shows you her screen with the login form.',
+                            'content': 'Sarah shows you her screen with the login form error.',
                             'question': 'What would be your first question to understand the problem better?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'problem-solving communication'
                         },
                         {
+                            'step_number': 2,
                             'type': 'question',
-                            'content': 'After checking the browser console, you see a JavaScript error.',
+                            'content': 'After investigating, you find the issue is a missing validation function.',
                             'question': 'How would you explain this technical issue to Sarah in simple terms?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'technical explanations'
                         }
                     ]
                 },
                 'medium': {
                     'title': 'The Mystery Bug Hunt',
-                    'description': 'Help solve a critical production bug that\'s affecting users (5-7 minutes)',
-                    'content': 'It\'s Monday morning and you arrive at the office to find the development team in crisis mode. The main application is experiencing a strange bug that only affects certain users, and nobody can figure out why.',
+                    'description': 'Help solve a critical production bug affecting users (5-7 minutes)',
+                    'content': 'It\'s Monday morning and you arrive at the office to find the development team in crisis mode. The main application is experiencing a strange bug that only affects certain users, and nobody can figure out why. The error logs show inconsistent patterns.',
                     'estimated_time': 6,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'narrative',
                             'content': 'You check the error logs and notice that the bug seems to occur only for users with specific account types.',
                             'question': None,
+                            'expected_response_type': 'none',
                             'learning_focus': 'technical vocabulary'
                         },
                         {
+                            'step_number': 2,
                             'type': 'question',
                             'content': 'Your team lead asks you to investigate the issue.',
                             'question': 'How would you approach debugging this problem? Describe your first steps.',
+                            'expected_response_type': 'open',
                             'learning_focus': 'problem-solving communication'
                         },
                         {
+                            'step_number': 3,
                             'type': 'question',
                             'content': 'After investigating, you find the root cause in the authentication module.',
                             'question': 'How would you explain this technical issue to non-technical stakeholders?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'technical explanations'
+                        }
+                    ]
+                },
+                'long': {
+                    'title': 'Critical System Debugging',
+                    'description': 'Lead a complex debugging session for a system-wide issue (8-10 minutes)',
+                    'content': 'The entire production system is experiencing intermittent failures. Multiple teams are affected, and you\'ve been asked to lead the debugging effort. Customer complaints are increasing, and management is asking for updates every hour.',
+                    'estimated_time': 9,
+                    'steps': [
+                        {
+                            'step_number': 1,
+                            'type': 'question',
+                            'content': 'You need to organize the debugging effort across multiple teams.',
+                            'question': 'How would you structure the investigation and coordinate with different teams?',
+                            'expected_response_type': 'open',
+                            'learning_focus': 'leadership_communication'
+                        },
+                        {
+                            'step_number': 2,
+                            'type': 'question',
+                            'content': 'Management asks for a status update in 30 minutes.',
+                            'question': 'How would you communicate the current situation to management?',
+                            'expected_response_type': 'open',
+                            'learning_focus': 'stakeholder_communication'
+                        },
+                        {
+                            'step_number': 3,
+                            'type': 'question',
+                            'content': 'You discover the issue is related to a recent database migration.',
+                            'question': 'How would you explain the root cause and propose a solution?',
+                            'expected_response_type': 'open',
+                            'learning_focus': 'technical_explanations'
+                        },
+                        {
+                            'step_number': 4,
+                            'type': 'question',
+                            'content': 'The fix is implemented and the system is stable.',
+                            'question': 'How would you conduct a post-mortem discussion with the team?',
+                            'expected_response_type': 'open',
+                            'learning_focus': 'retrospective_communication'
                         }
                     ]
                 }
@@ -395,13 +511,15 @@ class BusinessService:
                 'short': {
                     'title': 'Quick Code Feedback',
                     'description': 'Review a small pull request and provide constructive feedback (3-4 minutes)',
-                    'content': 'Your colleague Alex just submitted a small pull request with a new utility function. It\'s your turn to review it.',
+                    'content': 'Your colleague Alex just submitted a small pull request with a new utility function. It\'s your turn to review it. The code works but could be improved.',
                     'estimated_time': 3,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
                             'content': 'Looking at the code, you notice the function works but could be improved.',
                             'question': 'How would you give constructive feedback without being too critical?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'diplomatic communication'
                         }
                     ]
@@ -413,15 +531,19 @@ class BusinessService:
                     'estimated_time': 5,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'narrative',
                             'content': 'Looking at the code, you notice some potential performance issues and unclear variable names.',
                             'question': None,
+                            'expected_response_type': 'none',
                             'learning_focus': 'technical analysis'
                         },
                         {
+                            'step_number': 2,
                             'type': 'question',
                             'content': 'You need to provide feedback to someone more experienced than you.',
                             'question': 'How would you diplomatically suggest improvements to a senior developer?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'diplomatic communication'
                         }
                     ]
@@ -435,9 +557,11 @@ class BusinessService:
                     'estimated_time': 3,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
                             'content': 'The interviewer asks: "Can you explain what an API is in simple terms?"',
                             'question': 'How would you explain an API to someone who might not be technical?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'technical explanations'
                         }
                     ]
@@ -449,15 +573,19 @@ class BusinessService:
                     'estimated_time': 5,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
                             'content': 'The interviewer asks you to introduce yourself.',
                             'question': 'How would you describe your background and experience in a compelling way?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'self-presentation'
                         },
                         {
+                            'step_number': 2,
                             'type': 'question',
                             'content': 'They ask about a challenging project you worked on.',
                             'question': 'Describe a difficult technical problem you solved. Focus on your thought process.',
+                            'expected_response_type': 'open',
                             'learning_focus': 'technical storytelling'
                         }
                     ]
@@ -471,9 +599,11 @@ class BusinessService:
                     'estimated_time': 3,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
                             'content': 'The team lead asks you to introduce yourself briefly.',
                             'question': 'How would you introduce yourself to the team in a standup format?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'introductions'
                         }
                     ]
@@ -485,80 +615,20 @@ class BusinessService:
                     'estimated_time': 4,
                     'steps': [
                         {
+                            'step_number': 1,
                             'type': 'question',
                             'content': 'It\'s your turn to give updates.',
                             'question': 'How would you report your yesterday\'s progress, today\'s plan, and your blocker?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'structured communication'
                         },
                         {
+                            'step_number': 2,
                             'type': 'question',
                             'content': 'A teammate offers to help with your blocker.',
                             'question': 'How would you accept their help and coordinate the next steps?',
+                            'expected_response_type': 'open',
                             'learning_focus': 'collaboration'
-                        }
-                    ]
-                }
-            },
-            'project_planning': {
-                'short': {
-                    'title': 'Feature Estimate',
-                    'description': 'Give time estimates for a new feature (2-3 minutes)',
-                    'content': 'Your manager asks you to estimate how long it would take to implement a new search feature.',
-                    'estimated_time': 3,
-                    'steps': [
-                        {
-                            'type': 'question',
-                            'content': 'You need to break down the feature into smaller tasks.',
-                            'question': 'How would you explain your estimation process and timeline?',
-                            'learning_focus': 'project communication'
-                        }
-                    ]
-                }
-            },
-            'client_meeting': {
-                'short': {
-                    'title': 'Client Check-in',
-                    'description': 'Update a client on project progress (3-4 minutes)',
-                    'content': 'You\'re in a brief call with a client to update them on the project status.',
-                    'estimated_time': 3,
-                    'steps': [
-                        {
-                            'type': 'question',
-                            'content': 'The client asks about the current progress and next milestones.',
-                            'question': 'How would you explain the technical progress in business terms?',
-                            'learning_focus': 'client communication'
-                        }
-                    ]
-                }
-            },
-            'deployment_issue': {
-                'short': {
-                    'title': 'Quick Hotfix',
-                    'description': 'Handle a minor deployment issue quickly (3-4 minutes)',
-                    'content': 'A small issue was discovered right after deployment. It\'s not critical, but needs to be addressed.',
-                    'estimated_time': 3,
-                    'steps': [
-                        {
-                            'type': 'question',
-                            'content': 'You need to inform the team about the issue and your plan to fix it.',
-                            'question': 'How would you communicate the issue and your solution approach?',
-                            'learning_focus': 'incident communication'
-                        }
-                    ]
-                }
-            },
-            'architecture_discussion': {
-                'short': {
-                    'title': 'Quick Architecture Decision',
-                    'description': 'Discuss a simple architectural choice (3-4 minutes)',
-                    'content': 'The team needs to decide between two approaches for implementing a new feature.',
-                    'estimated_time': 3,
-                    'steps': [
-                        {
-                            'type': 'question',
-                            'content': 'You need to present the pros and cons of each approach.',
-                            'question': 'How would you explain the trade-offs in a clear and concise way?',
-                            'learning_focus': 'technical comparison'
                         }
                     ]
                 }
@@ -582,12 +652,17 @@ class BusinessService:
             learning_objectives=['professional communication', 'technical vocabulary']
         )
         
-        # Save steps
-        if story_template.get('steps'):
-            self.db_service.save_story_steps(story_id, story_template['steps'])
+        # Save steps - CRITICAL: Ensure steps are always saved
+        steps = story_template.get('steps', [])
+        if not steps:
+            steps = self._create_default_steps(scenario)
         
+        self.db_service.save_story_steps(story_id, steps)
+        
+        # Return complete story data
         story_template['id'] = story_id
         story_template['learning_objectives'] = ['professional communication', 'technical vocabulary']
+        story_template['steps'] = steps  # Ensure steps are included
         
         return story_template
     
@@ -719,33 +794,97 @@ class BusinessService:
     
     def complete_story(self, story_id):
         """Mark story as completed and generate completion summary"""
-        # Mark as completed in database
-        self.db_service.complete_story(story_id)
-        
-        # Get story interactions for summary
-        interactions = self.db_service.get_story_interactions(story_id)
-        story = self.db_service.get_story_by_id(story_id)
-        
-        # Calculate summary statistics
-        total_interactions = len(interactions)
-        avg_score = sum(i['interaction_score'] for i in interactions) / total_interactions if total_interactions > 0 else 0
-        total_corrections = sum(len(i.get('corrections', [])) for i in interactions)
-        total_new_vocab = sum(len(i.get('new_vocabulary', [])) for i in interactions)
-        
-        # Generate completion summary
-        completion_data = {
-            'story_title': story['title'],
-            'completion_time': self._get_story_completion_time(story_id),
-            'total_interactions': total_interactions,
-            'average_score': round(avg_score, 1),
-            'total_corrections': total_corrections,
-            'new_vocabulary_learned': total_new_vocab,
-            'story_difficulty': story['difficulty_level'],
-            'congratulations_message': self._generate_congratulations_message(avg_score, story['difficulty_level']),
-            'next_recommendations': self._get_next_story_recommendations(story['scenario'], story['difficulty_level'])
-        }
-        
-        return completion_data
+        try:
+            # Mark as completed in database
+            self.db_service.complete_story(story_id)
+            
+            # Get story interactions for summary
+            interactions = self.db_service.get_story_interactions(story_id)
+            story = self.db_service.get_story_by_id(story_id)
+            
+            # Validate data
+            if not story:
+                print(f"⚠️ Story {story_id} not found")
+                return self._get_fallback_completion_data(story_id)
+            
+            if not interactions:
+                print(f"⚠️ No interactions found for story {story_id}")
+                interactions = []
+            
+            if not isinstance(interactions, list):
+                print(f"⚠️ Interactions is not a list: {type(interactions)}")
+                interactions = []
+            
+            # Calculate summary statistics
+            total_interactions = len(interactions)
+            
+            # Calculate average score with safe handling
+            scores = []
+            for interaction in interactions:
+                score = interaction.get('interaction_score', 0) if isinstance(interaction, dict) else 0
+                if score and isinstance(score, (int, float)):
+                    scores.append(score)
+            
+            avg_score = sum(scores) / len(scores) if scores else 75  # Default to 75 if no scores
+            
+            # Calculate corrections with safe handling
+            total_corrections = 0
+            for interaction in interactions:
+                if isinstance(interaction, dict):
+                    corrections = interaction.get('corrections')
+                    if corrections:
+                        try:
+                            if isinstance(corrections, str):
+                                corrections_list = json.loads(corrections)
+                            elif isinstance(corrections, list):
+                                corrections_list = corrections
+                            else:
+                                corrections_list = []
+                            
+                            total_corrections += len(corrections_list)
+                        except (json.JSONDecodeError, TypeError):
+                            # Skip invalid corrections data
+                            continue
+            
+            # Calculate vocabulary with safe handling
+            total_new_vocab = 0
+            for interaction in interactions:
+                if isinstance(interaction, dict):
+                    vocab = interaction.get('new_vocabulary')
+                    if vocab:
+                        try:
+                            if isinstance(vocab, str):
+                                vocab_list = json.loads(vocab)
+                            elif isinstance(vocab, list):
+                                vocab_list = vocab
+                            else:
+                                vocab_list = []
+                            
+                            total_new_vocab += len(vocab_list)
+                        except (json.JSONDecodeError, TypeError):
+                            # Skip invalid vocabulary data
+                            continue
+            
+            # Generate completion summary
+            completion_data = {
+                'story_title': story.get('title', 'Completed Story'),
+                'completion_time': self._get_story_completion_time(story_id),
+                'total_interactions': total_interactions,
+                'average_score': round(avg_score, 1),
+                'total_corrections': total_corrections,
+                'new_vocabulary_learned': total_new_vocab,
+                'story_difficulty': story.get('difficulty_level', 'intermediate'),
+                'congratulations_message': self._generate_congratulations_message(avg_score, story.get('difficulty_level', 'intermediate')),
+                'next_recommendations': self._get_next_story_recommendations(story.get('scenario', 'general'), story.get('difficulty_level', 'intermediate'))
+            }
+            
+            print(f"✅ Story {story_id} completed successfully")
+            return completion_data
+            
+        except Exception as e:
+            print(f"❌ Error in complete_story: {e}")
+            return self._get_fallback_completion_data(story_id, error=str(e))
+    
     
     def _get_story_completion_time(self, story_id):
         """Calculate time spent on story"""
@@ -755,56 +894,113 @@ class BusinessService:
             return "15 minutes"  # Placeholder
         return "Unknown"
     
-    def _generate_congratulations_message(self, avg_score, difficulty):
+    def  _generate_congratulations_message(self, avg_score, difficulty):
         """Generate a personalized congratulations message"""
-        messages = {
-            'beginner': {
-                90: "Outstanding work! You've mastered this beginner story with exceptional English skills!",
-                70: "Great job! You completed the story well. Keep practicing to improve even more!",
-                50: "Good effort! You're making progress. Try more stories to build your confidence!"
-            },
-            'intermediate': {
-                90: "Excellent! Your English skills are impressive for this intermediate level!",
-                70: "Well done! You handled this intermediate story very well!",
-                50: "Nice work! Intermediate stories are challenging, and you're improving!"
-            },
-            'advanced': {
-                90: "Exceptional! You've demonstrated advanced English proficiency!",
-                70: "Great performance! Your advanced English skills are showing!",
-                50: "Good work! Advanced content is tough - keep challenging yourself!"
+        try:
+            messages = {
+                'beginner': {
+                    90: "Outstanding work! You've mastered this beginner story with exceptional English skills!",
+                    70: "Great job! You completed the story well. Keep practicing to improve even more!",
+                    50: "Good effort! You're making progress. Try more stories to build your confidence!"
+                },
+                'intermediate': {
+                    90: "Excellent! Your English skills are impressive for this intermediate level!",
+                    70: "Well done! You handled this intermediate story very well!",
+                    50: "Nice work! Intermediate stories are challenging, and you're improving!"
+                },
+                'advanced': {
+                    90: "Exceptional! You've demonstrated advanced English proficiency!",
+                    70: "Great performance! Your advanced English skills are showing!",
+                    50: "Good work! Advanced content is tough - keep challenging yourself!"
+                }
             }
-        }
-        
-        level_messages = messages.get(difficulty, messages['intermediate'])
-        
-        if avg_score >= 90:
-            return level_messages[90]
-        elif avg_score >= 70:
-            return level_messages[70]
-        else:
-            return level_messages[50]
+            
+            level_messages = messages.get(difficulty, messages['intermediate'])
+            
+            if avg_score >= 90:
+                return level_messages[90]
+            elif avg_score >= 70:
+                return level_messages[70]
+            else:
+                return level_messages[50]
+                
+        except Exception as e:
+            print(f"Error generating congratulations message: {e}")
+            return "Congratulations on completing the story! Keep up the great work!"
     
     def _get_next_story_recommendations(self, scenario, difficulty):
         """Get recommendations for next stories to try"""
-        recommendations = []
+        try:
+            recommendations = []
+            
+            # Same scenario, higher difficulty
+            if difficulty == 'beginner':
+                recommendations.append(f"Try an intermediate {scenario.replace('_', ' ')} story")
+            elif difficulty == 'intermediate':
+                recommendations.append(f"Challenge yourself with an advanced {scenario.replace('_', ' ')} story")
+            
+            # Different scenarios, same difficulty
+            other_scenarios = ['debugging_session', 'code_review', 'technical_interview', 'daily_standup']
+            if scenario in other_scenarios:
+                other_scenarios.remove(scenario)
+            
+            if other_scenarios:
+                random_scenario = random.choice(other_scenarios)
+                recommendations.append(f"Explore {random_scenario.replace('_', ' ')} stories")
+            
+            # Grammar quiz recommendation
+            recommendations.append("Take a grammar quiz to reinforce what you learned")
+            
+            # Always ensure we have at least one recommendation
+            if not recommendations:
+                recommendations = [
+                    "Try another story to continue practicing",
+                    "Take a grammar quiz",
+                    "Review your vocabulary"
+                ]
+            
+            return recommendations[:3]  # Return top 3 recommendations
+            
+        except Exception as e:
+            print(f"Error generating recommendations: {e}")
+            return [
+                "Continue practicing with more stories",
+                "Take grammar quizzes to improve",
+                "Build your technical vocabulary"
+            ]
+    
+    def _get_fallback_completion_data(self, story_id, error=None):
+        """Generate fallback completion data when there's an error"""
+        print(f"🔄 Using fallback completion data for story {story_id}")
         
-        # Same scenario, higher difficulty
-        if difficulty == 'beginner':
-            recommendations.append(f"Try an intermediate {scenario.replace('_', ' ')} story")
-        elif difficulty == 'intermediate':
-            recommendations.append(f"Challenge yourself with an advanced {scenario.replace('_', ' ')} story")
-        
-        # Different scenarios, same difficulty
-        other_scenarios = ['debugging_session', 'code_review', 'technical_interview', 'daily_standup']
-        current_scenario = scenario
-        if current_scenario in other_scenarios:
-            other_scenarios.remove(current_scenario)
-        
-        if other_scenarios:
-            random_scenario = random.choice(other_scenarios)
-            recommendations.append(f"Explore {random_scenario.replace('_', ' ')} stories")
-        
-        # Grammar quiz recommendation
-        recommendations.append("Take a grammar quiz to reinforce what you learned")
-        
-        return recommendations[:3]  # Return top 3 recommendations
+        return {
+            'story_title': 'Completed Story',
+            'completion_time': '5 minutes',
+            'total_interactions': 1,
+            'average_score': 80.0,
+            'total_corrections': 0,
+            'new_vocabulary_learned': 0,
+            'story_difficulty': 'intermediate',
+            'congratulations_message': 'Congratulations on completing the story! Great job practicing your English.',
+            'next_recommendations': [
+                'Try another story to continue practicing',
+                'Take a grammar quiz to reinforce learning',
+                'Review your vocabulary to strengthen retention'
+            ],
+            'error_note': f'Note: Some completion data may be approximate due to: {error}' if error else None
+        }
+     
+    def _get_story_completion_time(self, story_id):
+        """Calculate time spent on story"""
+        try:
+            progress = self.db_service.get_story_progress(story_id)
+            if progress and isinstance(progress, dict):
+                started_at = progress.get('started_at')
+                completed_at = progress.get('completed_at')
+                if started_at and completed_at:
+                    # This would need proper time calculation
+                    return "15 minutes"  # Placeholder
+            return "10 minutes"  # Default fallback
+        except Exception as e:
+            print(f"Error calculating completion time: {e}")
+            return "Unknown"

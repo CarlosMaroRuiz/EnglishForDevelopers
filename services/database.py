@@ -351,20 +351,44 @@ class DatabaseService:
         conn = self.get_connection()
         c = conn.cursor()
         
-        for i, step in enumerate(steps, 1):
-            c.execute('''INSERT INTO story_steps 
-                         (story_id, step_number, step_type, content, question, 
-                          expected_response_type, learning_focus)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                      (story_id, i, step.get('type', 'narrative'), step.get('content', ''),
-                       step.get('question', ''), step.get('expected_response_type', 'open'),
-                       step.get('learning_focus', '')))
-        
-        # Update total steps in stories table
-        c.execute('''UPDATE stories SET total_steps = ? WHERE id = ?''', (len(steps), story_id))
-        
-        conn.commit()
-        conn.close()
+        try:
+            # First, delete any existing steps for this story
+            c.execute('DELETE FROM story_steps WHERE story_id = ?', (story_id,))
+            
+            # Save new steps
+            for i, step in enumerate(steps, 1):
+                # Validate step data
+                step_number = step.get('step_number', i)
+                step_type = step.get('type', 'narrative')
+                content = step.get('content', '')
+                question = step.get('question')
+                expected_response_type = step.get('expected_response_type', 'open')
+                learning_focus = step.get('learning_focus', 'communication_skills')
+                
+                # Ensure content is not empty
+                if not content or len(content.strip()) < 5:
+                    content = f"Continue with step {step_number}..."
+                
+                c.execute('''INSERT INTO story_steps 
+                             (story_id, step_number, step_type, content, question, 
+                              expected_response_type, learning_focus)
+                             VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                          (story_id, step_number, step_type, content, question,
+                           expected_response_type, learning_focus))
+            
+            # Update total steps in stories table
+            total_steps = len(steps)
+            c.execute('''UPDATE stories SET total_steps = ? WHERE id = ?''', (total_steps, story_id))
+            
+            conn.commit()
+            print(f"Successfully saved {total_steps} steps for story {story_id}")
+            
+        except Exception as e:
+            conn.rollback()
+            print(f"Error saving story steps: {e}")
+            raise e
+        finally:
+            conn.close()
     
     def get_stories_list(self, limit=20):
         """Get list of available stories"""
@@ -387,36 +411,53 @@ class DatabaseService:
         conn = self.get_connection()
         c = conn.cursor()
         
-        c.execute('''SELECT * FROM stories WHERE id = ? AND is_active = TRUE''', (story_id,))
-        story_row = c.fetchone()
-        
-        if not story_row:
-            conn.close()
-            return None
-        
-        # Convert to dictionary
-        story = dict(zip([col[0] for col in c.description], story_row))
-        
-        # Parse learning_objectives JSON if it exists
-        if story.get('learning_objectives'):
-            try:
-                story['learning_objectives'] = json.loads(story['learning_objectives'])
-            except (json.JSONDecodeError, TypeError):
+        try:
+            c.execute('''SELECT * FROM stories WHERE id = ? AND is_active = TRUE''', (story_id,))
+            story_row = c.fetchone()
+            
+            if not story_row:
+                return None
+            
+            # Convert to dictionary
+            story = dict(zip([col[0] for col in c.description], story_row))
+            
+            # Parse learning_objectives JSON if it exists
+            if story.get('learning_objectives'):
+                try:
+                    story['learning_objectives'] = json.loads(story['learning_objectives'])
+                except (json.JSONDecodeError, TypeError):
+                    story['learning_objectives'] = []
+            else:
                 story['learning_objectives'] = []
-        else:
-            story['learning_objectives'] = []
-        
-        # Get story steps
-        c.execute('''SELECT * FROM story_steps WHERE story_id = ? ORDER BY step_number''', (story_id,))
-        steps_rows = c.fetchall()
-        
-        story['steps'] = []
-        for step_row in steps_rows:
-            step = dict(zip([col[0] for col in c.description], step_row))
-            story['steps'].append(step)
-        
-        conn.close()
-        return story
+            
+            # Get story steps
+            c.execute('''SELECT * FROM story_steps WHERE story_id = ? ORDER BY step_number''', (story_id,))
+            steps_rows = c.fetchall()
+            
+            story['steps'] = []
+            for step_row in steps_rows:
+                step = dict(zip([col[0] for col in c.description], step_row))
+                story['steps'].append(step)
+            
+            # Ensure total_steps matches actual steps
+            if story['steps']:
+                actual_steps = len(story['steps'])
+                if story.get('total_steps') != actual_steps:
+                    story['total_steps'] = actual_steps
+                    # Update database
+                    c.execute('''UPDATE stories SET total_steps = ? WHERE id = ?''', (actual_steps, story_id))
+                    conn.commit()
+            
+            # Debug log
+            print(f"Retrieved story {story_id} with {len(story['steps'])} steps")
+            
+            return story
+            
+        except Exception as e:
+            print(f"Error retrieving story {story_id}: {e}")
+            return None
+        finally:
+            conn.close()
     
     def save_story_interaction(self, story_id, step_number, user_response, ai_feedback=None, 
                               corrections=None, new_vocabulary=None, interaction_score=0.0, response_time=0):
@@ -497,51 +538,130 @@ class DatabaseService:
         conn = self.get_connection()
         c = conn.cursor()
         
-        c.execute('''SELECT * FROM user_story_progress WHERE story_id = ?''', (story_id,))
-        progress_row = c.fetchone()
-        
-        progress = None
-        if progress_row:
-            progress = dict(zip([col[0] for col in c.description], progress_row))
-        
-        conn.close()
-        return progress
+        try:
+            c.execute('''SELECT * FROM user_story_progress WHERE story_id = ?''', (story_id,))
+            progress_row = c.fetchone()
+            
+            if progress_row:
+                progress = dict(zip([col[0] for col in c.description], progress_row))
+                return progress
+            else:
+                # Return default progress structure
+                return {
+                    'story_id': story_id,
+                    'current_step': 1,
+                    'is_completed': False,
+                    'completion_percentage': 0.0,
+                    'total_interactions': 0,
+                    'started_at': None,
+                    'completed_at': None
+                }
+            
+        except Exception as e:
+            print(f"Error retrieving story progress: {e}")
+            return {
+                'story_id': story_id,
+                'current_step': 1,
+                'is_completed': False,
+                'completion_percentage': 0.0,
+                'total_interactions': 0,
+                'started_at': None,
+                'completed_at': None
+            }
+        finally:
+            conn.close()
     
     def get_story_interactions(self, story_id, limit=50):
         """Get user interactions for a specific story"""
         conn = self.get_connection()
         c = conn.cursor()
         
-        c.execute('''SELECT * FROM story_interactions 
-                     WHERE story_id = ? 
-                     ORDER BY timestamp DESC 
-                     LIMIT ?''', (story_id, limit))
-        
-        interactions = []
-        for row in c.fetchall():
-            interaction = dict(zip([col[0] for col in c.description], row))
-            # Parse JSON fields
-            if interaction['corrections']:
-                interaction['corrections'] = json.loads(interaction['corrections'])
-            if interaction['new_vocabulary']:
-                interaction['new_vocabulary'] = json.loads(interaction['new_vocabulary'])
-            interactions.append(interaction)
-        
-        conn.close()
-        return interactions
+        try:
+            c.execute('''SELECT * FROM story_interactions 
+                         WHERE story_id = ? 
+                         ORDER BY timestamp DESC 
+                         LIMIT ?''', (story_id, limit))
+            
+            rows = c.fetchall()
+            interactions = []
+            
+            if not rows:
+                print(f"No interactions found for story {story_id}")
+                return []  # Always return empty list, never None
+            
+            for row in rows:
+                try:
+                    interaction = dict(zip([col[0] for col in c.description], row))
+                    
+                    # Parse JSON fields safely
+                    if interaction.get('corrections'):
+                        try:
+                            interaction['corrections'] = json.loads(interaction['corrections'])
+                        except (json.JSONDecodeError, TypeError):
+                            print(f"Invalid corrections JSON for interaction {interaction.get('id')}")
+                            interaction['corrections'] = []
+                    else:
+                        interaction['corrections'] = []
+                    
+                    if interaction.get('new_vocabulary'):
+                        try:
+                            interaction['new_vocabulary'] = json.loads(interaction['new_vocabulary'])
+                        except (json.JSONDecodeError, TypeError):
+                            print(f"Invalid vocabulary JSON for interaction {interaction.get('id')}")
+                            interaction['new_vocabulary'] = []
+                    else:
+                        interaction['new_vocabulary'] = []
+                    
+                    # Ensure interaction_score is a number
+                    if interaction.get('interaction_score') is None:
+                        interaction['interaction_score'] = 0
+                    
+                    interactions.append(interaction)
+                    
+                except Exception as e:
+                    print(f"Error processing interaction row: {e}")
+                    continue  # Skip this row and continue with others
+            
+            print(f"Retrieved {len(interactions)} interactions for story {story_id}")
+            return interactions
+            
+        except Exception as e:
+            print(f"Error retrieving story interactions: {e}")
+            return []  # Always return empty list on error
+        finally:
+            conn.close()
     
     def complete_story(self, story_id):
         """Mark a story as completed"""
         conn = self.get_connection()
         c = conn.cursor()
         
-        c.execute('''UPDATE user_story_progress 
-                     SET is_completed = TRUE, completion_percentage = 100.0,
-                         completed_at = CURRENT_TIMESTAMP
-                     WHERE story_id = ?''', (story_id,))
-        
-        conn.commit()
-        conn.close()
+        try:
+            # Check if progress record exists
+            c.execute('''SELECT id FROM user_story_progress WHERE story_id = ?''', (story_id,))
+            progress_exists = c.fetchone()
+            
+            if progress_exists:
+                c.execute('''UPDATE user_story_progress 
+                             SET is_completed = TRUE, completion_percentage = 100.0,
+                                 completed_at = CURRENT_TIMESTAMP
+                             WHERE story_id = ?''', (story_id,))
+            else:
+                # Create progress record if it doesn't exist
+                c.execute('''INSERT INTO user_story_progress 
+                             (story_id, is_completed, completion_percentage, completed_at, started_at)
+                             VALUES (?, TRUE, 100.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)''', 
+                          (story_id,))
+            
+            conn.commit()
+            print(f"✅ Story {story_id} marked as completed")
+            
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Error completing story {story_id}: {e}")
+            raise e
+        finally:
+            conn.close()
     
     def get_story_templates(self, scenario=None, difficulty_level=None):
         """Get story templates for AI generation"""

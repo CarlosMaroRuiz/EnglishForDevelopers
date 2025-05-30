@@ -9,6 +9,8 @@ class Config:
     DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY') or ''
     DATABASE_PATH = 'english_tutor.db'
     DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+   
+
     
     # Work scenarios for practice
     WORK_SCENARIOS = [

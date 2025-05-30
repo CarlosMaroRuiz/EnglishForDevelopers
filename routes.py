@@ -195,6 +195,15 @@ class Routes:
             if not story:
                 return render_template('stories/not_found.html'), 404
             
+            # Validate story has steps
+            if not story.get('steps') or len(story['steps']) == 0:
+                print(f"Story {story_id} has no steps, creating default steps")
+                # Create default steps for this story
+                default_steps = self._create_emergency_steps(story.get('scenario', 'general'))
+                self.business_service.db_service.save_story_steps(story_id, default_steps)
+                # Reload story
+                story = self.business_service.get_story_by_id(story_id)
+            
             user_progress = self.business_service.get_story_progress(story_id)
             interactions = self.business_service.get_story_interactions(story_id)
             
@@ -214,32 +223,84 @@ class Routes:
         
         try:
             data = request.json if request.is_json else request.form
-            story_type = data.get('story_type', 'generated')
+            story_type = data.get('story_type', 'manual')
+            
+            print(f"Creating story of type: {story_type}")
             
             if story_type == 'generated':
                 # Generate story using AI
-                topic = data.get('topic', 'general')
+                topic = data.get('topic', 'software_development')
                 difficulty = data.get('difficulty', 'intermediate')
                 scenario = data.get('scenario', 'daily_standup')
+                length = data.get('length', 'short')
+                focus_areas = data.get('focus_areas', [])
                 
-                story = self.business_service.generate_ai_story(topic, difficulty, scenario)
+                story = self.business_service.generate_ai_story(
+                    topic=topic, 
+                    difficulty=difficulty, 
+                    scenario=scenario,
+                    length=length,
+                    focus_areas=focus_areas
+                )
+                
+                if not story:
+                    raise Exception("AI story generation failed")
+                    
             else:
                 # Manual story creation
-                title = data.get('title', '')
-                content = data.get('content', '')
+                title = data.get('title', '').strip()
+                content = data.get('content', '').strip()
                 scenario = data.get('scenario', 'general')
                 difficulty = data.get('difficulty', 'intermediate')
                 
                 if not title or not content:
                     return jsonify({"error": "Title and content are required"}), 400
                 
+                if len(content) < 50:
+                    return jsonify({"error": "Content must be at least 50 characters"}), 400
+                
                 story = self.business_service.create_manual_story(title, content, scenario, difficulty)
+            
+            if not story or not story.get('id'):
+                raise Exception("Story creation failed - no ID returned")
+            
+            print(f"Successfully created story {story['id']}")
             
             return jsonify({"success": True, "story_id": story['id']})
             
         except Exception as e:
             print(f"Error in create_story: {e}")
-            return jsonify({"error": str(e)}), 500
+            error_message = str(e)
+            if "API" in error_message:
+                error_message = "AI service is currently unavailable. Please try manual story creation."
+            
+            return jsonify({"error": error_message}), 500
+
+    def _create_emergency_steps(self, scenario):
+        """Create emergency steps when a story has none"""
+        scenario_questions = {
+            'debugging_session': "A bug has been reported. How would you approach investigating and solving this issue?",
+            'code_review': "You need to review a colleague's code. How would you provide constructive feedback?",
+            'technical_interview': "The interviewer asks about your problem-solving approach. How would you respond?",
+            'daily_standup': "It's your turn in the standup. What would you share with the team?",
+            'project_planning': "The team needs to plan the next sprint. What would you contribute to the discussion?",
+            'client_meeting': "The client has questions about the project. How would you address their concerns?",
+            'architecture_discussion': "The team is debating system architecture. What's your perspective?",
+            'deployment_issue': "A deployment has failed. How would you handle this situation?"
+        }
+        
+        question = scenario_questions.get(scenario, "How would you handle this professional situation?")
+        
+        return [
+            {
+                'step_number': 1,
+                'type': 'question',
+                'content': f"You're now in a {scenario.replace('_', ' ')} scenario. This is your opportunity to practice professional communication in English.",
+                'question': question,
+                'expected_response_type': 'open',
+                'learning_focus': 'professional_communication'
+            }
+        ]
     
     def story_interact(self, story_id):
         """Handle user interactions with stories"""
@@ -270,16 +331,42 @@ class Routes:
                 'topic': data.get('topic', 'software development'),
                 'difficulty': data.get('difficulty', 'intermediate'),
                 'scenario': data.get('scenario', 'daily_standup'),
-                'length': data.get('length', 'medium'),
-                'focus_areas': data.get('focus_areas', [])
+                'length': data.get('length', 'short'),  # Default to short for better success rate
+                'focus_areas': data.get('focus_areas', ['technical_vocabulary', 'communication_skills'])
             }
             
+            print(f"Generating story with parameters: {parameters}")
+            
             story = self.business_service.generate_ai_story(**parameters)
+            
+            if not story:
+                raise Exception("Failed to generate story - AI service returned None")
+            
+            if not story.get('id'):
+                raise Exception("Generated story has no ID")
+            
+            # Validate the story has steps
+            if not story.get('steps') or len(story['steps']) == 0:
+                print("Generated story has no steps, creating default steps")
+                default_steps = self._create_emergency_steps(parameters['scenario'])
+                self.business_service.db_service.save_story_steps(story['id'], default_steps)
+                story['steps'] = default_steps
+                story['total_steps'] = len(default_steps)
+            
+            print(f"Successfully generated story {story['id']} with {len(story.get('steps', []))} steps")
+            
             return jsonify(story)
             
         except Exception as e:
             print(f"Error in generate_story: {e}")
-            return jsonify({"error": str(e)}), 500
+            # Return a meaningful error message
+            error_message = str(e)
+            if "API" in error_message:
+                error_message = "AI service is currently unavailable. Please try again or create a manual story."
+            elif "timeout" in error_message.lower():
+                error_message = "Story generation timed out. Please try with a shorter story length."
+            
+            return jsonify({"error": error_message}), 500
     
     def complete_story(self, story_id):
         """Mark story as completed and generate summary"""

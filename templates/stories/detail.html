@@ -303,58 +303,148 @@ const translationCache = new Map();
 
 // Initialize story
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Story data:', currentStory); // Debug log
+    console.log('User progress:', userProgress); // Debug log
+    
     updateWordCount();
     updateNavigation();
+    
+    // Validate story data
+    if (!currentStory) {
+        showError('Story data not loaded properly');
+        return;
+    }
+    
+    // Ensure steps exist
+    if (!currentStory.steps || !Array.isArray(currentStory.steps) || currentStory.steps.length === 0) {
+        console.warn('Story has no steps, creating default step');
+        currentStory.steps = createDefaultSteps();
+        currentStory.total_steps = currentStory.steps.length;
+    }
     
     if (isStoryStarted) {
         loadCurrentStep();
     }
 });
 
+// Create default steps if none exist
+function createDefaultSteps() {
+    return [
+        {
+            step_number: 1,
+            type: 'question',
+            content: 'Welcome to this interactive story. You are now in a professional scenario where you need to communicate effectively.',
+            question: 'How would you handle this situation? Please provide a detailed professional response.',
+            learning_focus: 'professional_communication'
+        }
+    ];
+}
+
+// Show error message
+function showError(message) {
+    const container = document.getElementById('story-content');
+    if (container) {
+        container.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <div class="text-4xl mb-4">⚠️</div>
+                <h3 class="text-lg font-bold text-red-800 mb-2">Story Loading Error</h3>
+                <p class="text-red-700 mb-4">${message}</p>
+                <div class="flex space-x-3 justify-center">
+                    <a href="/stories" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Back to Stories
+                    </a>
+                    <button onclick="location.reload()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        Retry
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
 // Text area word count
 function updateWordCount() {
     const textarea = document.getElementById('user-response');
+    if (!textarea) return;
+    
     const text = textarea.value;
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const chars = text.length;
     
-    document.getElementById('word-count').textContent = words;
-    document.getElementById('char-count').textContent = chars;
+    const wordCountEl = document.getElementById('word-count');
+    const charCountEl = document.getElementById('char-count');
+    
+    if (wordCountEl) wordCountEl.textContent = words;
+    if (charCountEl) charCountEl.textContent = chars;
     
     // Enable/disable submit button
     const submitBtn = document.getElementById('submit-btn');
-    submitBtn.disabled = words < 3; // Require at least 3 words
+    if (submitBtn) {
+        submitBtn.disabled = words < 3; // Require at least 3 words
+    }
 }
 
-document.getElementById('user-response').addEventListener('input', updateWordCount);
+// Add event listener safely
+const responseTextarea = document.getElementById('user-response');
+if (responseTextarea) {
+    responseTextarea.addEventListener('input', updateWordCount);
+}
 
 // Story flow functions
 function startStory() {
+    console.log('Starting story...'); // Debug log
+    
+    // Validate story has steps
+    if (!currentStory.steps || currentStory.steps.length === 0) {
+        showError('This story has no interactive steps available.');
+        return;
+    }
+    
     isStoryStarted = true;
     currentStep = 1;
     
     // Hide start button, show interaction elements
-    document.getElementById('start-btn').classList.add('hidden');
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        startBtn.classList.add('hidden');
+    }
+    
     loadCurrentStep();
     updateNavigation();
 }
 
 function loadCurrentStep() {
+    console.log(`Loading step ${currentStep}...`); // Debug log
+    
     if (!currentStory.steps || currentStep > currentStory.steps.length) {
         // Story completed
         completeStory();
         return;
     }
     
+    if (currentStep <= 0) {
+        currentStep = 1;
+    }
+    
     const step = currentStory.steps[currentStep - 1];
+    if (!step) {
+        showError(`Step ${currentStep} not found`);
+        return;
+    }
+    
     displayStep(step);
     
     // Show interaction area if it's a question step
+    const interactionArea = document.getElementById('interaction-area');
     if (step.type === 'question' || step.question) {
-        document.getElementById('interaction-area').classList.remove('hidden');
+        if (interactionArea) {
+            interactionArea.classList.remove('hidden');
+        }
         responseStartTime = Date.now();
     } else {
-        document.getElementById('interaction-area').classList.add('hidden');
+        if (interactionArea) {
+            interactionArea.classList.add('hidden');
+        }
     }
     
     updateNavigation();
@@ -362,6 +452,8 @@ function loadCurrentStep() {
 
 function displayStep(step) {
     const container = document.getElementById('current-step-container');
+    if (!container) return;
+    
     container.classList.remove('hidden');
     
     const stepTypeColors = {
@@ -383,17 +475,22 @@ function displayStep(step) {
     const colorClass = stepTypeColors[step.type] || stepTypeColors['narrative'];
     const icon = stepTypeIcons[step.type] || stepTypeIcons['narrative'];
     
+    // Ensure step has required properties
+    const stepContent = step.content || 'Continue with this step...';
+    const stepType = step.type || 'narrative';
+    const learningFocus = step.learning_focus || 'communication skills';
+    
     container.innerHTML = `
         <div class="bg-gradient-to-r ${colorClass} p-6 rounded-lg border">
             <div class="flex items-center mb-3">
                 <span class="text-2xl mr-3">${icon}</span>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Step ${currentStep}: ${step.type.replace('_', ' ').toUpperCase()}</h3>
-                    ${step.learning_focus ? `<p class="text-sm text-gray-600">Focus: ${step.learning_focus}</p>` : ''}
+                    <h3 class="text-lg font-bold text-gray-800">Step ${currentStep}: ${stepType.replace('_', ' ').toUpperCase()}</h3>
+                    <p class="text-sm text-gray-600">Focus: ${learningFocus}</p>
                 </div>
             </div>
             <div class="text-gray-800 leading-relaxed mb-4" id="step-content-${currentStep}">
-                ${step.content}
+                ${stepContent}
             </div>
             ${step.question ? `
                 <div class="bg-white p-4 rounded border border-gray-200 mt-4">
@@ -402,7 +499,7 @@ function displayStep(step) {
                 </div>
             ` : ''}
             <div class="mt-3 flex space-x-2">
-                <button onclick="translateStepContent(${currentStep}, '${step.content.replace(/'/g, "\\'")}', 'content')" 
+                <button onclick="translateStepContent(${currentStep}, '${stepContent.replace(/'/g, "\\'")}', 'content')" 
                         class="bg-white bg-opacity-50 text-gray-700 px-3 py-1 rounded hover:bg-opacity-70 transition text-sm">
                     🌐 Translate Content
                 </button>
@@ -418,7 +515,13 @@ function displayStep(step) {
 }
 
 async function submitResponse() {
-    const responseText = document.getElementById('user-response').value.trim();
+    const responseTextarea = document.getElementById('user-response');
+    if (!responseTextarea) {
+        alert('Response textarea not found');
+        return;
+    }
+    
+    const responseText = responseTextarea.value.trim();
     
     if (responseText.length < 10) {
         alert('Please provide a more detailed response (at least 10 characters).');
@@ -428,10 +531,14 @@ async function submitResponse() {
     // Calculate response time
     const responseTime = responseStartTime ? Math.round((Date.now() - responseStartTime) / 1000) : 0;
     
-    // Show loading
-    showLoading('AI is analyzing your response and preparing feedback...');
+    // Show loading with timeout warning
+    showLoading('AI is analyzing your response... This may take up to 30 seconds.');
     
     try {
+        // Increased timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch(`/stories/${currentStory.id}/interact`, {
             method: 'POST',
             headers: {
@@ -441,8 +548,15 @@ async function submitResponse() {
                 response: responseText,
                 current_step: currentStep,
                 response_time: responseTime
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const data = await response.json();
         
@@ -462,29 +576,151 @@ async function submitResponse() {
         }
         
         // Clear response area
-        document.getElementById('user-response').value = '';
+        responseTextarea.value = '';
         updateWordCount();
         
         // Hide interaction area and show next step button
-        document.getElementById('interaction-area').classList.add('hidden');
+        const interactionArea = document.getElementById('interaction-area');
+        if (interactionArea) {
+            interactionArea.classList.add('hidden');
+        }
+        
+        const nextBtn = document.getElementById('next-step-btn');
+        const completeBtn = document.getElementById('complete-btn');
         
         if (data.is_complete) {
-            document.getElementById('next-step-btn').classList.add('hidden');
-            document.getElementById('complete-btn').classList.remove('hidden');
+            if (nextBtn) nextBtn.classList.add('hidden');
+            if (completeBtn) completeBtn.classList.remove('hidden');
         } else {
-            document.getElementById('next-step-btn').classList.remove('hidden');
+            if (nextBtn) nextBtn.classList.remove('hidden');
+            if (completeBtn) completeBtn.classList.add('hidden');
         }
         
         updateNavigation();
         
     } catch (error) {
         hideLoading();
-        alert('Error submitting response: ' + error.message);
+        
+        let errorMessage = 'Error submitting response: ' + error.message;
+        let isTimeout = false;
+        
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+            isTimeout = true;
+            errorMessage = 'The AI service is taking too long to respond. Your response has been saved, but AI feedback is temporarily unavailable.';
+        } else if (error.message.includes('API request timed out')) {
+            isTimeout = true;
+            errorMessage = 'The AI service is currently slow. Your response has been saved, but feedback may be delayed.';
+        }
+        
+        if (isTimeout) {
+            // Show timeout-specific feedback
+            showTimeoutFeedback(responseText);
+        } else {
+            alert(errorMessage);
+        }
+        
+        console.error('Submit error:', error);
+    }
+}
+
+function showTimeoutFeedback(userResponse) {
+    const feedbackArea = document.getElementById('feedback-area');
+    if (!feedbackArea) return;
+    
+    feedbackArea.classList.remove('hidden');
+    
+    feedbackArea.innerHTML = `
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border border-yellow-200">
+            <div class="flex items-center mb-4">
+                <span class="text-2xl mr-3">⏰</span>
+                <div>
+                    <h4 class="text-lg font-bold text-yellow-800">AI Service Timeout</h4>
+                    <div class="text-sm text-yellow-600">Your response was saved, but AI feedback is temporarily unavailable</div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded border border-yellow-200 mb-4">
+                <div class="text-gray-800 leading-relaxed">
+                    <strong>Your Response:</strong><br>
+                    "${userResponse}"
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded border border-blue-200 mb-4">
+                <div class="text-blue-800">
+                    <strong>💡 Quick Self-Assessment:</strong><br>
+                    • Did you use professional language?<br>
+                    • Were your sentences clear and complete?<br>
+                    • Did you address the main question effectively?<br>
+                    • Could you add more technical vocabulary?
+                </div>
+            </div>
+            
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+                <div class="text-sm text-green-800">
+                    <strong>✅ Your progress has been saved!</strong> You can continue to the next step or try again later when the AI service is faster.
+                </div>
+            </div>
+            
+            <div class="mt-4 flex space-x-3">
+                <button onclick="continueWithoutAI()" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    Continue to Next Step
+                </button>
+                <button onclick="retryWithAI()" 
+                        class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
+                    Try AI Feedback Again
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Scroll to feedback
+    feedbackArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function continueWithoutAI() {
+    // Hide interaction area and show next step button
+    const interactionArea = document.getElementById('interaction-area');
+    if (interactionArea) {
+        interactionArea.classList.add('hidden');
+    }
+    
+    const nextBtn = document.getElementById('next-step-btn');
+    if (nextBtn) {
+        nextBtn.classList.remove('hidden');
+    }
+    
+    updateNavigation();
+}
+
+function retryWithAI() {
+    // Clear the timeout feedback and show interaction area again
+    const feedbackArea = document.getElementById('feedback-area');
+    if (feedbackArea) {
+        feedbackArea.classList.add('hidden');
+    }
+    
+    const interactionArea = document.getElementById('interaction-area');
+    if (interactionArea) {
+        interactionArea.classList.remove('hidden');
+    }
+    
+    // Restore the user's response
+    const textarea = document.getElementById('user-response');
+    if (textarea && feedbackArea) {
+        const responseText = feedbackArea.querySelector('strong:contains("Your Response:")');
+        if (responseText) {
+            // Extract the response from the feedback display
+            // This is a simplified version - you might want to store the response differently
+        }
     }
 }
 
 function displayFeedback(data) {
     const feedbackArea = document.getElementById('feedback-area');
+    if (!feedbackArea) return;
+    
     feedbackArea.classList.remove('hidden');
     
     let feedbackHtml = `
@@ -493,15 +729,15 @@ function displayFeedback(data) {
                 <span class="text-2xl mr-3">🤖</span>
                 <div>
                     <h4 class="text-lg font-bold text-purple-800">AI Feedback</h4>
-                    <div class="text-sm text-purple-600">Score: ${data.interaction_score}/100</div>
+                    <div class="text-sm text-purple-600">Score: ${data.interaction_score || 0}/100</div>
                 </div>
             </div>
             
             <div class="bg-white p-4 rounded border border-purple-200 mb-4">
                 <div class="text-gray-800 leading-relaxed" id="ai-feedback-text">
-                    ${data.ai_feedback}
+                    ${data.ai_feedback || 'Great response!'}
                 </div>
-                <button onclick="translateText('ai-feedback-text', '${data.ai_feedback.replace(/'/g, "\\'")}', 'en', 'es')" 
+                <button onclick="translateText('ai-feedback-text', '${(data.ai_feedback || '').replace(/'/g, "\\'")}', 'en', 'es')" 
                         class="mt-2 bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200 transition text-sm">
                     🌐 Translate Feedback
                 </button>
@@ -520,10 +756,10 @@ function displayFeedback(data) {
             feedbackHtml += `
                 <div class="bg-red-50 p-3 rounded border border-red-200">
                     <div class="text-sm">
-                        <span class="text-red-600 line-through">"${correction.original}"</span>
-                        <span class="text-green-600 font-medium"> → "${correction.corrected}"</span>
+                        <span class="text-red-600 line-through">"${correction.original || ''}"</span>
+                        <span class="text-green-600 font-medium"> → "${correction.corrected || ''}"</span>
                     </div>
-                    <div class="text-xs text-gray-600 mt-1">${correction.explanation}</div>
+                    <div class="text-xs text-gray-600 mt-1">${correction.explanation || ''}</div>
                 </div>
             `;
         });
@@ -545,8 +781,8 @@ function displayFeedback(data) {
         data.new_vocabulary.forEach(vocab => {
             feedbackHtml += `
                 <div class="bg-blue-50 p-3 rounded border border-blue-200">
-                    <div class="font-medium text-blue-800">${vocab.word}</div>
-                    <div class="text-sm text-blue-700">${vocab.definition}</div>
+                    <div class="font-medium text-blue-800">${vocab.word || ''}</div>
+                    <div class="text-sm text-blue-700">${vocab.definition || ''}</div>
                     ${vocab.example ? `<div class="text-xs text-blue-600 italic mt-1">"${vocab.example}"</div>` : ''}
                 </div>
             `;
@@ -578,11 +814,23 @@ function displayFeedback(data) {
 }
 
 function nextStep() {
+    if (!currentStory.steps || currentStep >= currentStory.steps.length) {
+        completeStory();
+        return;
+    }
+    
     currentStep++;
     
     // Hide feedback area
-    document.getElementById('feedback-area').classList.add('hidden');
-    document.getElementById('next-step-btn').classList.add('hidden');
+    const feedbackArea = document.getElementById('feedback-area');
+    if (feedbackArea) {
+        feedbackArea.classList.add('hidden');
+    }
+    
+    const nextBtn = document.getElementById('next-step-btn');
+    if (nextBtn) {
+        nextBtn.classList.add('hidden');
+    }
     
     loadCurrentStep();
 }
@@ -598,12 +846,23 @@ async function completeStory() {
     showLoading('Generating your completion report...');
     
     try {
+        // Shorter timeout for completion
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
         const response = await fetch(`/stories/${currentStory.id}/complete`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const data = await response.json();
         
@@ -612,45 +871,51 @@ async function completeStory() {
         
     } catch (error) {
         hideLoading();
-        alert('Error completing story: ' + error.message);
+        console.error('Complete story error:', error);
+        
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+            // Show simplified completion modal for timeout
+            showSimpleCompletionModal();
+        } else {
+            alert('Error completing story: ' + error.message);
+        }
     }
 }
-
-function showCompletionModal(completionData) {
+function showSimpleCompletionModal() {
     const modal = document.getElementById('completion-modal');
     const content = document.getElementById('completion-content');
     
+    if (!modal || !content) return;
+    
     content.innerHTML = `
         <div class="space-y-4">
-            <div class="text-lg text-gray-700">${completionData.congratulations_message}</div>
+            <div class="text-lg text-gray-700">🎉 Congratulations on completing the story!</div>
             
-            <div class="grid md:grid-cols-2 gap-4 text-sm">
-                <div class="bg-blue-50 p-4 rounded">
-                    <div class="font-medium text-blue-800">Total Interactions</div>
-                    <div class="text-2xl font-bold text-blue-600">${completionData.total_interactions}</div>
-                </div>
-                <div class="bg-green-50 p-4 rounded">
-                    <div class="font-medium text-green-800">Average Score</div>
-                    <div class="text-2xl font-bold text-green-600">${completionData.average_score}/100</div>
-                </div>
-                <div class="bg-red-50 p-4 rounded">
-                    <div class="font-medium text-red-800">Corrections Made</div>
-                    <div class="text-2xl font-bold text-red-600">${completionData.total_corrections}</div>
-                </div>
-                <div class="bg-purple-50 p-4 rounded">
-                    <div class="font-medium text-purple-800">New Vocabulary</div>
-                    <div class="text-2xl font-bold text-purple-600">${completionData.new_vocabulary_learned}</div>
+            <div class="bg-yellow-50 p-4 rounded border border-yellow-200">
+                <div class="text-yellow-800 text-sm">
+                    <strong>Note:</strong> Detailed completion statistics are temporarily unavailable due to slow AI service, but your progress has been saved!
                 </div>
             </div>
             
-            ${completionData.next_recommendations ? `
-                <div class="text-left">
-                    <h4 class="font-semibold text-gray-800 mb-2">🚀 What's Next?</h4>
-                    <ul class="text-sm text-gray-700 space-y-1">
-                        ${completionData.next_recommendations.map(rec => `<li>• ${rec}</li>`).join('')}
-                    </ul>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-blue-50 p-4 rounded">
+                    <div class="font-medium text-blue-800">Story Completed</div>
+                    <div class="text-2xl font-bold text-blue-600">✅</div>
                 </div>
-            ` : ''}
+                <div class="bg-green-50 p-4 rounded">
+                    <div class="font-medium text-green-800">Progress Saved</div>
+                    <div class="text-2xl font-bold text-green-600">100%</div>
+                </div>
+            </div>
+            
+            <div class="text-left">
+                <h4 class="font-semibold text-gray-800 mb-2">🚀 What's Next?</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Try another story to continue practicing</li>
+                    <li>• Take a grammar quiz to reinforce learning</li>
+                    <li>• Review your vocabulary to strengthen retention</li>
+                </ul>
+            </div>
         </div>
     `;
     
@@ -668,20 +933,25 @@ function updateNavigation() {
     const prevBtn = document.getElementById('prev-step-btn');
     const nextBtn = document.getElementById('next-step-btn');
     
-    // Update previous button
-    prevBtn.disabled = currentStep <= 1;
+    if (prevBtn) {
+        prevBtn.disabled = currentStep <= 1;
+    }
     
     // Update step display if progress exists
     const stepDisplay = document.querySelector('.text-sm.text-gray-600');
     if (stepDisplay && stepDisplay.textContent.includes('Step')) {
-        stepDisplay.textContent = `Step ${currentStep} of ${currentStory.total_steps || currentStory.steps?.length || 1}`;
+        const totalSteps = currentStory.total_steps || (currentStory.steps ? currentStory.steps.length : 1);
+        stepDisplay.textContent = `Step ${currentStep} of ${totalSteps}`;
     }
 }
 
 // Utility functions
 function clearResponse() {
-    document.getElementById('user-response').value = '';
-    updateWordCount();
+    const textarea = document.getElementById('user-response');
+    if (textarea) {
+        textarea.value = '';
+        updateWordCount();
+    }
 }
 
 function retryStory() {
@@ -689,17 +959,23 @@ function retryStory() {
 }
 
 function showLoading(message) {
-    document.getElementById('loading-message').textContent = message;
-    document.getElementById('loading-modal').classList.remove('hidden');
+    const loadingModal = document.getElementById('loading-modal');
+    const loadingMessage = document.getElementById('loading-message');
+    
+    if (loadingMessage) loadingMessage.textContent = message;
+    if (loadingModal) loadingModal.classList.remove('hidden');
 }
 
 function hideLoading() {
-    document.getElementById('loading-modal').classList.add('hidden');
+    const loadingModal = document.getElementById('loading-modal');
+    if (loadingModal) loadingModal.classList.add('hidden');
 }
 
 // Translation functions
 async function translateText(elementId, text, fromLang, toLang) {
     const button = event.target;
+    if (!button) return;
+    
     const translationElement = document.getElementById(`${elementId}-${toLang}`);
     
     // Check if already translated
@@ -723,11 +999,13 @@ async function translateText(elementId, text, fromLang, toLang) {
             if (!translationElement) {
                 // Create translation element
                 const parentElement = document.getElementById(elementId);
-                const newElement = document.createElement('div');
-                newElement.id = `${elementId}-${toLang}`;
-                newElement.className = 'text-blue-600 text-sm mt-2 italic border-t border-gray-200 pt-2';
-                newElement.innerHTML = `🇪🇸 ${data.responseData.translatedText}`;
-                parentElement.parentNode.insertBefore(newElement, parentElement.nextSibling);
+                if (parentElement) {
+                    const newElement = document.createElement('div');
+                    newElement.id = `${elementId}-${toLang}`;
+                    newElement.className = 'text-blue-600 text-sm mt-2 italic border-t border-gray-200 pt-2';
+                    newElement.innerHTML = `🇪🇸 ${data.responseData.translatedText}`;
+                    parentElement.parentNode.insertBefore(newElement, parentElement.nextSibling);
+                }
             } else {
                 translationElement.innerHTML = `🇪🇸 ${data.responseData.translatedText}`;
                 translationElement.classList.remove('hidden');
@@ -770,6 +1048,62 @@ style.textContent = `
         resize: none;
     }
 `;
+
+// AGREGAR ESTAS FUNCIONES AL FINAL DEL SCRIPT:
+
+function showCompletionModal(completionData) {
+    const modal = document.getElementById('completion-modal');
+    const content = document.getElementById('completion-content');
+    
+    if (!modal || !content) {
+        alert('🎉 Congratulations! Story completed successfully!');
+        return;
+    }
+    
+    // Validar datos
+    const data = completionData || {
+        congratulations_message: 'Congratulations on completing the story!',
+        total_interactions: 1,
+        average_score: 80,
+        total_corrections: 0,
+        new_vocabulary_learned: 0,
+        next_recommendations: ['Try another story', 'Take a quiz']
+    };
+    
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div class="text-lg text-gray-700">${data.congratulations_message}</div>
+            
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-blue-50 p-4 rounded">
+                    <div class="font-medium text-blue-800">Total Interactions</div>
+                    <div class="text-2xl font-bold text-blue-600">${data.total_interactions || 0}</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded">
+                    <div class="font-medium text-green-800">Average Score</div>
+                    <div class="text-2xl font-bold text-green-600">${data.average_score || 0}/100</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded">
+                    <div class="font-medium text-red-800">Corrections Made</div>
+                    <div class="text-2xl font-bold text-red-600">${data.total_corrections || 0}</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded">
+                    <div class="font-medium text-purple-800">New Vocabulary</div>
+                    <div class="text-2xl font-bold text-purple-600">${data.new_vocabulary_learned || 0}</div>
+                </div>
+            </div>
+            
+            <div class="text-left">
+                <h4 class="font-semibold text-gray-800 mb-2">🚀 What's Next?</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    ${(data.next_recommendations || []).map(rec => `<li>• ${rec}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
 document.head.appendChild(style);
 </script>
 

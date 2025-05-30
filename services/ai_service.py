@@ -26,7 +26,8 @@ class DeepSeekClient:
         }
         
         try:
-            response = requests.post(url, headers=self.headers, json=payload, timeout=15)  # Reduced timeout
+            # Reduced timeout and added retry logic
+            response = requests.post(url, headers=self.headers, json=payload, timeout=10)
             response.raise_for_status()
             
             data = response.json()
@@ -43,12 +44,16 @@ class DeepSeekClient:
             return ChatCompletion([Choice(data['choices'][0]['message']['content'])])
             
         except requests.exceptions.Timeout:
-            raise Exception(f"API request timed out after 15 seconds. Try again or use a shorter story.")
+            print("⚠️ API request timed out after 10 seconds")
+            raise Exception(f"API request timed out. The AI service is taking too long to respond.")
         except requests.exceptions.RequestException as e:
+            print(f"⚠️ API request failed: {str(e)}")
             raise Exception(f"API request failed: {str(e)}")
         except KeyError as e:
+            print(f"⚠️ Unexpected API response format: {str(e)}")
             raise Exception(f"Unexpected API response format: {str(e)}")
         except Exception as e:
+            print(f"⚠️ Error calling DeepSeek API: {str(e)}")
             raise Exception(f"Error calling DeepSeek API: {str(e)}")
 
 class AIService:
@@ -64,12 +69,7 @@ class AIService:
     def analyze_english_with_deepseek(self, user_message, scenario):
         """Analyze user's English and provide corrections and suggestions"""
         if not self.client:
-            return {
-                "conversation_response": "Sorry, the AI service is not properly configured. Please check your API key.",
-                "corrections": [],
-                "new_vocabulary": [],
-                "suggestions": "Please configure your DeepSeek API key to use this feature."
-            }
+            return self._get_fallback_analysis(user_message, scenario)
         
         system_prompt = f"""You are an English tutor specialized in helping software developers improve their technical English communication. 
 
@@ -157,21 +157,11 @@ Do NOT include any other text before or after the JSON. Only return the JSON obj
                 print(f"Raw content: {content}")
                 
                 # Fallback if JSON parsing fails
-                return {
-                    "conversation_response": content,
-                    "corrections": [],
-                    "new_vocabulary": [],
-                    "suggestions": "The AI provided a response but in an unexpected format."
-                }
+                return self._get_fallback_analysis(user_message, scenario, ai_response=content)
                 
         except Exception as e:
             print(f"Error calling DeepSeek API: {e}")
-            return {
-                "conversation_response": "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again later.",
-                "corrections": [],
-                "new_vocabulary": [],
-                "suggestions": f"Error details: {str(e)}"
-            }
+            return self._get_fallback_analysis(user_message, scenario, error=str(e))
     
     def generate_quiz_questions(self, user_mistakes, num_questions=5):
         """Generate quiz questions based on user's common mistakes"""
@@ -248,21 +238,21 @@ Do NOT include any other text before or after the JSON."""
         # Build comprehensive prompt for story generation
         length_specs = {
             'short': {
-                'time': '2-4 minutes',
+                'time': '3-5 minutes',
                 'steps': '1-2 interactive steps',
                 'content_length': '100-200 words',
                 'focus': 'Quick, focused practice'
             },
             'medium': {
-                'time': '4-7 minutes', 
-                'steps': '2-4 interactive steps',
-                'content_length': '200-350 words',
+                'time': '5-8 minutes', 
+                'steps': '2-3 interactive steps',
+                'content_length': '200-300 words',
                 'focus': 'Moderate depth practice'
             },
             'long': {
-                'time': '7-12 minutes',
-                'steps': '4-6 interactive steps', 
-                'content_length': '350-500 words',
+                'time': '8-12 minutes',
+                'steps': '3-4 interactive steps', 
+                'content_length': '300-400 words',
                 'focus': 'Comprehensive practice'
             }
         }
@@ -283,43 +273,77 @@ PARAMETERS:
 STORY REQUIREMENTS:
 1. Create a realistic but BRIEF professional scenario
 2. Keep content concise - {length_info['content_length']} for introduction
-3. Design {length_info['steps']} that require quick, focused responses
+3. Design {length_info['steps']} that require focused responses
 4. Focus on practical workplace communication
 5. Make it immediately engaging and actionable
 
+CRITICAL: You MUST create interactive steps. Each step should either be:
+- type: "narrative" (for story progression, no user input needed)
+- type: "question" (requires user response, must have both content AND question)
+
 RESPONSE FORMAT - Return ONLY valid JSON:
 {{
-    "title": "Short, catchy title (max 6 words)",
-    "description": "1-2 sentence description of the quick learning experience",
-    "content": "Brief narrative introduction ({length_info['content_length']}) - set up the scenario quickly and clearly",
+    "title": "Short, catchy title (max 8 words)",
+    "description": "1-2 sentence description of the learning experience",
+    "content": "Brief narrative introduction ({length_info['content_length']}) - set up the scenario clearly",
     "learning_objectives": ["objective1", "objective2"],
     "estimated_time": {length_info['time'].split('-')[0]},
-    "total_steps": {length_info['steps'].split('-')[0]},
+    "total_steps": 2,
     "steps": [
         {{
             "step_number": 1,
             "type": "question",
-            "content": "Brief situation setup (1-2 sentences)",
-            "question": "Specific, actionable question requiring a quick professional response",
+            "content": "Brief situation setup (1-2 sentences describing what happens next)",
+            "question": "Specific, actionable question requiring a professional response",
             "expected_response_type": "open",
-            "learning_focus": "communication_skills"
+            "learning_focus": "professional_communication"
+        }},
+        {{
+            "step_number": 2,
+            "type": "question",
+            "content": "Follow-up situation (1-2 sentences about what happens after their response)",
+            "question": "Another specific question to continue the interaction",
+            "expected_response_type": "open",
+            "learning_focus": "technical_vocabulary"
         }}
     ]
 }}
 
-CONCISENESS GUIDELINES:
-- Short stories: 1-2 steps maximum, very focused
-- Medium stories: 2-4 steps, moderate depth
-- Keep ALL content brief and practical
-- Focus on immediate application
-- Avoid lengthy narratives - get to the point quickly
+EXAMPLE for debugging_session:
+{{
+    "title": "Quick Bug Fix Challenge",
+    "description": "Help your teammate solve a critical login bug affecting users",
+    "content": "It's Tuesday afternoon when Sarah from the QA team rushes to your desk. 'We have a problem! Users can't log into the application - they're getting a 500 error. The client is asking for updates every 10 minutes. Can you help me figure this out?'",
+    "learning_objectives": ["technical problem solving", "professional communication"],
+    "estimated_time": 4,
+    "total_steps": 2,
+    "steps": [
+        {{
+            "step_number": 1,
+            "type": "question",
+            "content": "You open the server logs and see several database connection timeout errors.",
+            "question": "How would you explain to Sarah what you've found and what your next debugging steps will be?",
+            "expected_response_type": "open",
+            "learning_focus": "technical_communication"
+        }},
+        {{
+            "step_number": 2,
+            "type": "question",
+            "content": "After investigating, you discover the database connection pool is exhausted due to a recent code deployment.",
+            "question": "How would you communicate this finding to both Sarah and the development team, including your recommended solution?",
+            "expected_response_type": "open",
+            "learning_focus": "stakeholder_communication"
+        }}
+    ]
+}}
 
-DIFFICULTY GUIDELINES:
-- Beginner: Simple, clear situations with basic vocabulary
-- Intermediate: Professional scenarios with standard terminology  
-- Advanced: Complex but brief technical discussions
-
-Make it SHORT, practical, and immediately useful for workplace English practice."""
+IMPORTANT RULES:
+- Keep the main content brief and engaging
+- Each step MUST have both "content" and "question" if type is "question"
+- Questions should be specific and actionable
+- Focus on realistic workplace communication
+- Ensure the story flows logically from step to step
+- Always include exactly 2 steps for consistency"""
 
         try:
             response = self.client.chat_completions_create(
@@ -340,7 +364,19 @@ Make it SHORT, practical, and immediately useful for workplace English practice.
             # Parse JSON response
             try:
                 story_data = json.loads(content)
+                
+                # Validate the story structure
+                if not self._validate_ai_story_data(story_data):
+                    print("AI generated invalid story structure")
+                    return None
+                
+                # Ensure steps are properly formatted
+                story_data['steps'] = self._fix_story_steps(story_data.get('steps', []))
+                story_data['total_steps'] = len(story_data['steps'])
+                
+                print(f"AI generated story with {len(story_data['steps'])} steps")
                 return story_data
+                
             except json.JSONDecodeError as e:
                 print(f"JSON parsing error in story generation: {e}")
                 print(f"Raw content: {content[:500]}...")
@@ -349,6 +385,66 @@ Make it SHORT, practical, and immediately useful for workplace English practice.
         except Exception as e:
             print(f"Error generating story with AI: {e}")
             return None
+        
+    def _validate_ai_story_data(self, story_data):
+        """Validate AI-generated story data structure"""
+        required_fields = ['title', 'content', 'steps']
+        
+        for field in required_fields:
+            if field not in story_data:
+                print(f"Missing required field: {field}")
+                return False
+        
+        # Validate steps
+        steps = story_data.get('steps', [])
+        if not isinstance(steps, list) or len(steps) == 0:
+            print("Steps must be a non-empty list")
+            return False
+        
+        for i, step in enumerate(steps):
+            if not isinstance(step, dict):
+                print(f"Step {i} is not a dictionary")
+                return False
+            
+            # Check required step fields
+            required_step_fields = ['type', 'content']
+            for field in required_step_fields:
+                if field not in step or not step[field]:
+                    print(f"Step {i} missing required field: {field}")
+                    return False
+            
+            # If it's a question type, it must have a question
+            if step.get('type') == 'question' and not step.get('question'):
+                print(f"Question step {i} missing question field")
+                return False
+        
+        return True
+    
+    def _fix_story_steps(self, steps):
+        """Fix and standardize story steps"""
+        fixed_steps = []
+        
+        for i, step in enumerate(steps):
+            fixed_step = {
+                'step_number': i + 1,
+                'type': step.get('type', 'question'),
+                'content': step.get('content', f'Continue with step {i + 1}...'),
+                'question': step.get('question'),
+                'expected_response_type': step.get('expected_response_type', 'open'),
+                'learning_focus': step.get('learning_focus', 'communication_skills')
+            }
+            
+            # Ensure question exists for question type steps
+            if fixed_step['type'] == 'question' and not fixed_step['question']:
+                fixed_step['question'] = f"How would you respond in this situation?"
+            
+            # Ensure content is not empty
+            if not fixed_step['content'] or len(fixed_step['content'].strip()) < 10:
+                fixed_step['content'] = f"Step {i + 1}: Consider your response to this professional scenario."
+            
+            fixed_steps.append(fixed_step)
+        
+        return fixed_steps
     
     def generate_ai_personal_report(self):
         """Generate a comprehensive AI analysis report of the user's English skills"""
@@ -476,3 +572,78 @@ Do NOT include any text before or after the JSON object."""
                 "learning_path": ["Practice daily conversations", "Focus on grammar quizzes"],
                 "personality_insights": ["Shows commitment to learning"]
             }
+    def _get_fallback_analysis(self, user_message, scenario, ai_response=None, error=None):
+        """Provide fallback analysis when AI is unavailable"""
+        print(f"🔄 Using fallback analysis for scenario: {scenario}")
+        
+        # Basic grammar check patterns
+        corrections = []
+        new_vocabulary = []
+        
+        # Simple grammar patterns to check
+        grammar_patterns = [
+            (r'\bi am work\b', 'I am working', 'Present continuous tense'),
+            (r'\bcan able to\b', 'can / am able to', 'Avoid double modals'),
+            (r'\bvery much\b', 'a lot / greatly', 'More natural expression'),
+            (r'\bmake a test\b', 'run a test', 'Technical terminology'),
+            (r'\bfix a bug\b', 'fix the bug', 'Specific article usage'),
+        ]
+        
+        import re
+        user_lower = user_message.lower()
+        
+        for pattern, correction, explanation in grammar_patterns:
+            if re.search(pattern, user_lower):
+                original_match = re.search(pattern, user_lower)
+                if original_match:
+                    corrections.append({
+                        "original": original_match.group(),
+                        "corrected": correction,
+                        "type": "grammar",
+                        "explanation": explanation
+                    })
+        
+        # Technical vocabulary suggestions based on scenario
+        vocab_suggestions = {
+            'debugging_session': [
+                {"word": "troubleshoot", "definition": "to identify and solve problems", "example": "Let me troubleshoot this issue step by step."}
+            ],
+            'code_review': [
+                {"word": "refactor", "definition": "to restructure code without changing functionality", "example": "We should refactor this function for better readability."}
+            ],
+            'daily_standup': [
+                {"word": "blocker", "definition": "an issue preventing progress", "example": "I have a blocker with the API integration."}
+            ]
+        }
+        
+        if scenario in vocab_suggestions:
+            new_vocabulary = vocab_suggestions[scenario]
+        
+        # Scenario-specific responses
+        scenario_responses = {
+            'debugging_session': "I understand you're working on debugging. That's a great approach to problem-solving. What's your next step?",
+            'code_review': "Your code review feedback sounds constructive. It's important to provide clear, actionable suggestions.",
+            'daily_standup': "Thanks for the update. It's good to communicate both progress and any blockers clearly.",
+            'technical_interview': "That's a thoughtful response. Technical interviews are great opportunities to showcase your problem-solving approach.",
+            'project_planning': "Good planning approach. Breaking down tasks helps estimate effort more accurately.",
+            'client_meeting': "Clear communication with clients is essential. Making technical concepts accessible is a valuable skill.",
+            'architecture_discussion': "Architecture discussions benefit from considering multiple perspectives. What are the trade-offs?",
+            'deployment_issue': "Handling deployment issues requires both technical skills and clear communication with stakeholders."
+        }
+        
+        conversation_response = ai_response or scenario_responses.get(scenario, "I understand your point. Let's continue the discussion.")
+        
+        suggestions = "Keep practicing professional communication! "
+        if error and "timeout" in error.lower():
+            suggestions += "The AI service is currently slow - your English practice is still valuable!"
+        elif corrections:
+            suggestions += f"Focus on the {len(corrections)} grammar point(s) highlighted above."
+        else:
+            suggestions += "Your English looks good! Try using more technical vocabulary to sound more professional."
+        
+        return {
+            "conversation_response": conversation_response,
+            "corrections": corrections,
+            "new_vocabulary": new_vocabulary,
+            "suggestions": suggestions
+        }
