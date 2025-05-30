@@ -2,10 +2,16 @@
 
 An AI-powered English tutor specifically designed for software developers who want to improve their technical English communication skills in professional workplace scenarios.
 
+![English Tutor Dashboard](./images/home.jpeg)
+
 ## ✨ Features
 
 ### 🎯 Real Workplace Scenarios
+
 Practice English in authentic software development contexts:
+
+![Scenarios Selection](./images/stories.jpeg)
+
 - **Daily Standups** - Share updates, discuss blockers
 - **Code Reviews** - Provide feedback, suggest improvements
 - **Technical Interviews** - Answer questions, explain solutions
@@ -15,21 +21,35 @@ Practice English in authentic software development contexts:
 - **Architecture Discussions** - Design system architecture
 - **Deployment Issues** - Handle production problems
 
+![Chat Interface](./images/stories2.jpeg)
+
 ### 🤖 AI-Powered Learning
+
 Using DeepSeek API for intelligent analysis:
+
+![AI Corrections Example](./images/home2.jpeg)
+
 - **Grammar Corrections** - Instant feedback on mistakes
 - **Vocabulary Enhancement** - Learn technical terminology
 - **Style Improvements** - Professional communication tips
 - **Context-Aware Responses** - Scenario-specific conversations
 
 ### 📝 Personalized Grammar Quizzes
+
+![Quiz Interface](./images/quizz.jpeg)
+
 - **AI-Generated Questions** - Based on your most common mistakes
 - **Adaptive Learning** - Questions target your weak areas
 - **Detailed Explanations** - Learn why answers are correct
 - **Progress Tracking** - Monitor quiz performance over time
 - **Focus Area Recommendations** - Know what to practice next
 
+![Quiz Results](./images/value_quizz.jpeg)
+
 ### 🤖 AI Personal Analysis Reports
+
+![AI Report Dashboard](./images/ai_report.jpeg)
+
 - **Comprehensive Skill Assessment** - Detailed analysis of your English abilities
 - **Strengths & Weaknesses** - Identify what you do well and what needs work
 - **Grammar Mastery Tracking** - See which topics you've mastered
@@ -37,7 +57,12 @@ Using DeepSeek API for intelligent analysis:
 - **Learning Style Insights** - Understand how you learn best
 - **Actionable Recommendations** - Specific steps to improve faster
 
+![Personal Analysis Charts](./images/home3.jpeg)
+
 ### 📊 Advanced Analytics Dashboard
+
+![Analytics Overview](./images/analitics.jpeg)
+
 - **Mistake Pattern Analysis** - Identify your most common errors
 - **Vocabulary Growth Tracking** - Monitor words learned over time
 - **Scenario Performance** - See which situations need more practice
@@ -45,6 +70,7 @@ Using DeepSeek API for intelligent analysis:
 - **Personalized Recommendations** - AI suggestions for focused learning
 
 ### 🌐 Bilingual Support (English-Spanish)
+
 - **Real-time Translation** - Translate AI responses and corrections
 - **Bilingual Interface** - Switch languages with one click
 - **Enhanced Translation** - Multiple translation services with fallbacks
@@ -52,6 +78,7 @@ Using DeepSeek API for intelligent analysis:
 - **Cultural Context** - Understand professional communication differences
 
 ### 📈 Progress Tracking & History
+
 - **Conversation History** - Review all your practice sessions
 - **Vocabulary Management** - Track and review learned words
 - **Detailed Corrections** - See all grammar improvements over time
@@ -112,6 +139,16 @@ english-tutor-developers/
 ├── .gitignore           # Git ignore rules
 ├── example.env          # Environment variables template
 ├── english_tutor.db     # SQLite database (auto-created)
+├── images/              # Application screenshots
+│   ├── home.jpeg        # Main dashboard overview
+│   ├── home2.jpeg       # AI corrections and features
+│   ├── home3.jpeg       # Personal analysis charts
+│   ├── stories.jpeg     # Scenarios selection
+│   ├── stories2.jpeg    # Chat interface
+│   ├── quizz.jpeg       # Quiz interface
+│   ├── value_quizz.jpeg # Quiz results and scoring
+│   ├── ai_report.jpeg   # AI analysis reports
+│   └── analitics.jpeg   # Analytics dashboard
 ├── services/            # Business logic layer
 │   ├── __init__.py      # Services package init
 │   ├── database.py      # Database operations
@@ -257,18 +294,4 @@ The application provides detailed insights into your learning:
 - **Improved Architecture**: Service-oriented design for better maintainability
 - **Better Error Handling**: More robust API integration and fallbacks
 
-
-
 ## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-If you encounter issues:
-
-1. **Check the test script**: Run `python test.py` to verify your setup
-2. **Review the logs**: Check console output for error messages
-3. **API Key Issues**: Ensure your DeepSeek API key is valid and has sufficient credits
-4. **Database Problems**: Delete `english_tutor.db` to reset the database
-5. **Translation Issues**: The app has fallback dictionaries if translation APIs fail
