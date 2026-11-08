@@ -4,7 +4,7 @@
     <!-- Header with Language Toggle -->
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h2 class="text-3xl font-bold text-gray-800" id="main-title">📝 Conversation History</h2>
+            <h2 class="text-3xl font-bold text-gray-800" id="main-title"><i data-lucide="pencil-line"></i> Conversation History</h2>
             <p class="text-gray-600 mt-1" id="subtitle">Review your English learning conversations and corrections</p>
         </div>
         
@@ -13,31 +13,31 @@
             <button onclick="toggleLanguage('en')" 
                     id="btn-en" 
                     class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-500 text-white">
-                🇺🇸 English
+                 English
             </button>
             <button onclick="toggleLanguage('es')" 
                     id="btn-es" 
                     class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100">
-                🇪🇸 Español
+                 Español
             </button>
         </div>
     </div>
     
     {% if conversations %}
     <div class="space-y-6">
-        {% for user_msg, ai_resp, corrections, scenario, timestamp in conversations %}
+        {% for conv in conversations %}
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transform hover:shadow-xl transition-shadow duration-300">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-4">
+            <div class="bg-blue-50 border-b border-gray-200 p-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium capitalize" data-translate="scenario-{{ scenario }}">
-                            {{ scenario.replace('_', ' ') }}
+                        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium capitalize" data-translate="scenario-{{ conv.scenario }}">
+                            {{ conv.scenario.replace('_', ' ') }}
                         </span>
-                        <span class="text-gray-600 text-sm">{{ timestamp }}</span>
+                        <span class="text-gray-600 text-sm">{{ conv.timestamp }}</span>
                     </div>
                     <div class="text-sm text-gray-500">
-                        {% if corrections and corrections != '[]' %}
+                        {% if conv.corrections and conv.corrections != '[]' %}
                             <span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs" data-translate="corrections-made">
                                 Corrections made
                             </span>
@@ -53,44 +53,43 @@
             <!-- Content -->
             <div class="p-6 space-y-4">
                 <!-- User Message -->
-                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 rounded-lg">
+                <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="font-bold text-green-800 text-sm uppercase tracking-wide" data-translate="you-said">👤 You said</span>
-                        <button onclick="translateMessage('user-msg-{{ loop.index }}', '{{ user_msg|replace("'", "\\'") }}')" 
+                        <span class="font-bold text-green-800 text-sm uppercase tracking-wide" data-translate="you-said"><i data-lucide="user"></i> You said</span>
+                        <button onclick="translateMessage('user-msg-{{ loop.index }}')" 
                                 class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full hover:bg-green-200 transition flex items-center gap-1">
-                            <span class="text-sm">🌐</span> <span data-translate="translate-btn">ES</span>
+                            <span class="text-sm"><i data-lucide="languages"></i></span> <span data-translate="translate-btn">ES</span>
                         </button>
                     </div>
-                    <div class="text-gray-800" id="user-msg-{{ loop.index }}">{{ user_msg }}</div>
+                    <div class="text-gray-800" id="user-msg-{{ loop.index }}">{{ conv.user_message }}</div>
                     <div class="text-green-600 text-sm mt-2 hidden italic border-t border-green-200 pt-2" id="user-msg-{{ loop.index }}-es">
                         <!-- Spanish translation will appear here -->
                     </div>
                 </div>
                 
                 <!-- AI Response -->
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-lg">
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="font-bold text-blue-800 text-sm uppercase tracking-wide" data-translate="ai-response">🤖 AI Response</span>
-                        <button onclick="translateMessage('ai-resp-{{ loop.index }}', '{{ ai_resp|replace("'", "\\'") }}')" 
+                        <span class="font-bold text-blue-800 text-sm uppercase tracking-wide" data-translate="ai-response"><i data-lucide="bot"></i> AI Response</span>
+                        <button onclick="translateMessage('ai-resp-{{ loop.index }}')" 
                                 class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition flex items-center gap-1">
-                            <span class="text-sm">🌐</span> <span data-translate="translate-btn">ES</span>
+                            <span class="text-sm"><i data-lucide="languages"></i></span> <span data-translate="translate-btn">ES</span>
                         </button>
                     </div>
-                    <div class="text-gray-800" id="ai-resp-{{ loop.index }}">{{ ai_resp }}</div>
+                    <div class="text-gray-800" id="ai-resp-{{ loop.index }}">{{ conv.ai_response }}</div>
                     <div class="text-blue-600 text-sm mt-2 hidden italic border-t border-blue-200 pt-2" id="ai-resp-{{ loop.index }}-es">
                         <!-- Spanish translation will appear here -->
                     </div>
                 </div>
                 
                 <!-- Corrections -->
-                {% if corrections and corrections != '[]' %}
-                <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 p-4 rounded-lg">
+                {% if conv.corrections and conv.corrections != '[]' %}
+                <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="font-bold text-red-800 text-sm uppercase tracking-wide" data-translate="corrections-made-label">✏️ Corrections Made</span>
+                        <span class="font-bold text-red-800 text-sm uppercase tracking-wide" data-translate="corrections-made-label"><i data-lucide="pencil"></i> Corrections Made</span>
                         <div class="flex gap-2">
-                            <button onclick="translateCorrections('corrections-{{ loop.index }}')" 
-                                    class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full hover:bg-red-200 transition">
-                                🌐 <span data-translate="translate-btn">ES</span>
+                             <button onclick="translateCorrections('corrections-{{ loop.index }}')" class="inline-flex items-center gap-1.5 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full hover:bg-red-200 transition">
+                                <i data-lucide="languages"></i> <span data-translate="translate-btn">ES</span>
                             </button>
                             <button onclick="toggleCorrections('corrections-{{ loop.index }}')" 
                                     class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full hover:bg-red-200 transition"
@@ -105,7 +104,7 @@
                     
                     <!-- Store corrections data as hidden JSON -->
                     <script type="application/json" id="corrections-data-{{ loop.index }}">
-                        {{ corrections|safe }}
+                        {{ conv.corrections|safe }}
                     </script>
                 </div>
                 {% endif %}
@@ -113,15 +112,13 @@
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-between pt-2 border-t border-gray-200">
                     <div class="flex space-x-2">
-                        <button onclick="practiceAgain('{{ scenario }}')" 
-                                class="text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition"
-                                data-translate="practice-again">
-                            🔄 Practice Again
+                         <button onclick="practiceAgain('{{ conv.scenario }}')" class="inline-flex items-center gap-1.5 text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition">
+                                data-translate="practice-again"
+                            <i data-lucide="refresh-cw"></i> Practice Again
                         </button>
-                        <button onclick="exportConversation({{ loop.index }})" 
-                                class="text-sm bg-gray-500 text-white px-3 py-1 rounded-full hover:bg-gray-600 transition"
-                                data-translate="export">
-                            📥 Export
+                         <button onclick="exportConversation({{ loop.index }})" class="inline-flex items-center gap-1.5 text-sm bg-gray-500 text-white px-3 py-1 rounded-full hover:bg-gray-600 transition">
+                                data-translate="export"
+                            <i data-lucide="download"></i> Export
                         </button>
                     </div>
                     <div class="text-xs text-gray-500" data-translate="conversation-number">
@@ -134,8 +131,8 @@
     </div>
     
     <!-- Statistics Summary -->
-    <div class="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-        <h3 class="text-lg font-bold text-purple-800 mb-4" data-translate="summary-title">📊 Session Summary</h3>
+    <div class="mt-8 bg-purple-50 rounded-xl p-6 border border-purple-200">
+        <h3 class="text-lg font-bold text-purple-800 mb-4" data-translate="summary-title"><i data-lucide="bar-chart-3"></i> Session Summary</h3>
         <div class="grid md:grid-cols-3 gap-4">
             <div class="text-center">
                 <div class="text-2xl font-bold text-purple-600">{{ conversations|length }}</div>
@@ -143,7 +140,7 @@
             </div>
             <div class="text-center">
                 <div class="text-2xl font-bold text-green-600">
-                    {% set perfect_count = conversations|selectattr('2', 'equalto', '[]')|list|length %}
+                    {% set perfect_count = conversations|selectattr('corrections', 'equalto', '[]')|list|length %}
                     {{ perfect_count }}
                 </div>
                 <div class="text-sm text-green-700" data-translate="perfect-responses">Perfect Responses</div>
@@ -166,7 +163,7 @@
     
     {% else %}
     <div class="bg-white rounded-xl shadow-lg p-12 text-center">
-        <div class="text-6xl mb-4">💬</div>
+        <div class="text-6xl mb-4"><i data-lucide="messages-square"></i></div>
         <h3 class="text-xl font-semibold text-gray-800 mb-2" data-translate="no-conversations">No conversations yet</h3>
         <p class="text-gray-600 mb-6" data-translate="start-practicing-hint">Start practicing to see your conversation history!</p>
         <a href="/" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition font-medium" data-translate="start-practicing">
@@ -182,20 +179,20 @@ const translationCache = new Map();
 
 const translations = {
     'en': {
-        'main-title': '📝 Conversation History',
+        'main-title': ' Conversation History',
         'subtitle': 'Review your English learning conversations and corrections',
         'corrections-made': 'Corrections made',
         'perfect': 'Perfect!',
-        'you-said': '👤 You said',
-        'ai-response': '🤖 AI Response',
-        'corrections-made-label': '✏️ Corrections Made',
+        'you-said': ' You said',
+        'ai-response': ' AI Response',
+        'corrections-made-label': ' Corrections Made',
         'view-details': 'View Details',
         'hide-details': 'Hide Details',
         'translate-btn': 'ES',
-        'practice-again': '🔄 Practice Again',
-        'export': '📥 Export',
+        'practice-again': ' Practice Again',
+        'export': ' Export',
         'conversation-number': 'Conversation #',
-        'summary-title': '📊 Session Summary',
+        'summary-title': ' Session Summary',
         'total-conversations': 'Total Conversations',
         'perfect-responses': 'Perfect Responses',
         'need-improvement': 'Need Improvement',
@@ -227,20 +224,20 @@ const translations = {
         'punctuation': 'Punctuation'
     },
     'es': {
-        'main-title': '📝 Historial de Conversaciones',
+        'main-title': ' Historial de Conversaciones',
         'subtitle': 'Revisa tus conversaciones de aprendizaje de inglés y correcciones',
         'corrections-made': 'Correcciones realizadas',
         'perfect': '¡Perfecto!',
-        'you-said': '👤 Tú dijiste',
-        'ai-response': '🤖 Respuesta del AI',
-        'corrections-made-label': '✏️ Correcciones Realizadas',
+        'you-said': ' Tú dijiste',
+        'ai-response': ' Respuesta del AI',
+        'corrections-made-label': ' Correcciones Realizadas',
         'view-details': 'Ver Detalles',
         'hide-details': 'Ocultar Detalles',
         'translate-btn': 'EN',
-        'practice-again': '🔄 Practicar de Nuevo',
-        'export': '📥 Exportar',
+        'practice-again': ' Practicar de Nuevo',
+        'export': ' Exportar',
         'conversation-number': 'Conversación #',
-        'summary-title': '📊 Resumen de la Sesión',
+        'summary-title': ' Resumen de la Sesión',
         'total-conversations': 'Conversaciones Totales',
         'perfect-responses': 'Respuestas Perfectas',
         'need-improvement': 'Necesitan Mejora',
@@ -310,8 +307,10 @@ function translateAllElements() {
 }
 
 // Enhanced translation function for messages
-async function translateMessage(messageId, text) {
+async function translateMessage(messageId) {
     const button = event.target.closest('button');
+    const sourceEl = document.getElementById(messageId);
+    const text = sourceEl ? sourceEl.textContent.trim() : '';
     const translationElement = document.getElementById(`${messageId}-es`);
     
     // Check if already translated
@@ -326,7 +325,7 @@ async function translateMessage(messageId, text) {
     const cacheKey = `${text}-en-es`;
     if (translationCache.has(cacheKey)) {
         const cachedTranslation = translationCache.get(cacheKey);
-        translationElement.innerHTML = `🇪🇸 ${cachedTranslation}`;
+        translationElement.innerHTML = ` ${cachedTranslation}`;
         translationElement.classList.remove('hidden');
         button.querySelector('span:last-child').textContent = 'Hide';
         return;
@@ -334,7 +333,7 @@ async function translateMessage(messageId, text) {
     
     // Show loading state
     const originalContent = button.innerHTML;
-    button.innerHTML = '🔄 Traduciendo...';
+    button.innerHTML = ' Traduciendo...';
     button.disabled = true;
     
     try {
@@ -344,11 +343,11 @@ async function translateMessage(messageId, text) {
         translationCache.set(cacheKey, translatedText);
         
         // Show translation
-        translationElement.innerHTML = `🇪🇸 ${translatedText}`;
+        translationElement.innerHTML = ` ${translatedText}`;
         translationElement.classList.remove('hidden');
         
         // Update button
-        button.innerHTML = '<span class="text-sm">🌐</span> <span>Hide</span>';
+        button.innerHTML = '<span class="text-sm"></span> <span>Hide</span>';
         
     } catch (error) {
         console.error('Translation error:', error);
@@ -356,10 +355,10 @@ async function translateMessage(messageId, text) {
         // Use fallback translation
         const fallbackTranslation = getFallbackTranslation(text, 'en', 'es');
         
-        translationElement.innerHTML = `🇪🇸 ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
+        translationElement.innerHTML = ` ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
         translationElement.classList.remove('hidden');
         
-        button.innerHTML = '<span class="text-sm">⚠️</span> <span>Básica</span>';
+        button.innerHTML = '<span class="text-sm"></span> <span>Básica</span>';
     }
     
     button.disabled = false;
@@ -483,9 +482,9 @@ function loadCorrections(elementId) {
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-200 text-red-800">
                                 ${translatedType}
                             </span>
-                            <button onclick="translateCorrection('correction-${correctionIndex}-${index}', '${(correction.explanation || '').replace(/'/g, "\\'")}', '${correction.original || ''}', '${correction.corrected || ''}')" 
+                            <button onclick="translateCorrection('correction-${correctionIndex}-${index}')" 
                                     class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full hover:bg-red-200 transition">
-                                🌐 ES
+                                 ES
                             </button>
                         </div>
                         <div class="space-y-2">
@@ -495,7 +494,7 @@ function loadCorrections(elementId) {
                                 <span class="text-green-700 font-medium text-sm">"${correction.corrected || 'N/A'}"</span>
                             </div>
                             <div class="text-xs text-gray-600 bg-gray-50 p-2 rounded" id="correction-${correctionIndex}-${index}">
-                                💡 ${correction.explanation || 'No explanation provided'}
+                                 ${correction.explanation || 'No explanation provided'}
                             </div>
                             <div class="text-xs text-blue-600 bg-blue-50 p-2 rounded hidden" id="correction-${correctionIndex}-${index}-es">
                                 <!-- Spanish translation will appear here -->
@@ -525,31 +524,33 @@ function loadCorrections(elementId) {
     }
 }
 
-async function translateCorrection(elementId, explanation, original, corrected) {
+async function translateCorrection(elementId) {
     const button = event.target;
+    const sourceEl = document.getElementById(elementId);
+    const explanation = sourceEl ? sourceEl.textContent.trim() : '';
     const translationElement = document.getElementById(`${elementId}-es`);
     
     if (!translationElement.classList.contains('hidden')) {
         translationElement.classList.add('hidden');
-        button.textContent = '🌐 ES';
+        button.textContent = ' ES';
         return;
     }
     
-    button.textContent = '🔄 Traduciendo...';
+    button.textContent = ' Traduciendo...';
     button.disabled = true;
     
     try {
         const translatedExplanation = await tryTranslateText(explanation, 'en', 'es');
         
-        translationElement.innerHTML = `🇪🇸 ${translatedExplanation}`;
+        translationElement.innerHTML = ` ${translatedExplanation}`;
         translationElement.classList.remove('hidden');
-        button.textContent = '🌐 Hide';
+        button.textContent = ' Hide';
         
     } catch (error) {
         const fallbackTranslation = getFallbackTranslation(explanation, 'en', 'es');
-        translationElement.innerHTML = `🇪🇸 ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
+        translationElement.innerHTML = ` ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
         translationElement.classList.remove('hidden');
-        button.textContent = '⚠️ Básica';
+        button.textContent = ' Básica';
     }
     
     button.disabled = false;

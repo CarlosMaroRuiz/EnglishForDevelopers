@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-2xl mx-auto text-center py-16">
-    <div class="text-8xl mb-8">😔</div>
+    <div class="text-8xl mb-8"><i data-lucide="frown"></i></div>
     <h2 class="text-3xl font-bold text-gray-800 mb-4">Oops! Something went wrong</h2>
     <p class="text-gray-600 mb-8">We encountered an error while loading your story. Don't worry, your progress is saved!</p>
     
@@ -12,11 +12,11 @@
     </div>
     
     <div class="flex space-x-4 justify-center">
-        <a href="/stories" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            📚 Back to Stories
+         <a href="/stories" class="inline-flex items-center gap-1.5 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            <i data-lucide="book-open"></i> Back to Stories
         </a>
-        <button onclick="location.reload()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium">
-            🔄 Try Again
+         <button onclick="location.reload()" class="inline-flex items-center gap-1.5 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+            <i data-lucide="refresh-cw"></i> Try Again
         </button>
     </div>
 </div>

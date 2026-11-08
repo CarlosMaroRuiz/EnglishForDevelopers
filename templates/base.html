@@ -4,88 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>English Tutor for Developers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Google Drive-inspired palette remapped across every Tailwind family.
+        const blueScale = {50:'#e8f0fe',100:'#d2e3fc',200:'#c6dafc',300:'#a8c7fa',400:'#8ab4f8',500:'#1a73e8',600:'#1a73e8',700:'#1765cc',800:'#1557b0',900:'#0d3c8f',950:'#062e6f'};
+        const neutralScale = {50:'#f8f9fa',100:'#f1f3f4',200:'#e8eaed',300:'#dadce0',400:'#bdc1c6',500:'#9aa0a6',600:'#5f6368',700:'#3c4043',800:'#202124',900:'#171717',950:'#0f0f0f'};
+        const greenScale = {50:'#e6f4ea',100:'#ceead6',200:'#a8dab5',300:'#81c995',400:'#5bb974',500:'#188038',600:'#188038',700:'#0d652d',800:'#0a5225',900:'#073b1a'};
+        const redScale = {50:'#fce8e6',100:'#fad2cf',200:'#f6aea9',300:'#f28b82',400:'#ee675c',500:'#d93025',600:'#d93025',700:'#a50e0e',800:'#8c1d18',900:'#601410'};
+        const yellowScale = {50:'#fef7e0',100:'#fde293',200:'#fdd663',300:'#fcc934',400:'#fbbc04',500:'#f9ab00',600:'#f9ab00',700:'#e37400',800:'#b06000',900:'#8a4b00'};
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'code-blue': '#1e3a8a',
-                        'code-green': '#059669',
-                        'error-red': '#dc2626'
+                        blue: blueScale, sky: blueScale, indigo: blueScale, purple: blueScale,
+                        violet: blueScale, pink: blueScale, rose: blueScale, fuchsia: blueScale,
+                        teal: blueScale, cyan: blueScale,
+                        green: greenScale, emerald: greenScale, lime: greenScale,
+                        red: redScale, orange: yellowScale, amber: yellowScale, yellow: yellowScale,
+                        gray: neutralScale, slate: neutralScale, zinc: neutralScale,
+                        neutral: neutralScale, stone: neutralScale
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.5s ease-in-out',
-                        'slide-up': 'slideUp 0.3s ease-out'
+                        'fade-in': 'fadeIn 0.4s ease-out',
+                        'slide-up': 'slideUp 0.25s ease-out'
                     }
                 }
             }
         }
     </script>
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        .animate-slide-up {
-            animation: slideUp 0.3s ease-out;
-        }
-        .gradient-text {
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .glass-effect {
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.9);
-        }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        h1, h2, h3, h4 { letter-spacing: -0.01em; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        .animate-slide-up { animation: slideUp 0.25s ease-out; }
+        .gradient-text { color: #1a73e8; }
+        /* Tailwind sets svg{display:block}; keep Lucide icons inline and on the text baseline. */
+        svg.lucide { display: inline-block; vertical-align: -0.125em; }
+        svg.lucide:not([class*="w-"]) { width: 1em; height: 1em; }
+        * { scrollbar-width: thin; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
     </style>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/js/sse.js"></script>
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/onboarding.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <nav class="bg-code-blue text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-2xl font-bold">💻 English Tutor</h1>
-                    <span class="text-blue-200">for Developers</span>
+<body class="bg-[#f8f9fa] min-h-screen text-[#202124] antialiased">
+    {% set nav = [
+        ('/', 'home', 'Home', 'nav.home'),
+        ('/speak', 'mic', 'Speak', 'nav.speak'),
+        ('/stories', 'book-open', 'Stories', 'nav.stories'),
+        ('/quiz', 'pencil-line', 'Quiz', 'nav.quiz'),
+        ('/report', 'bot', 'AI Report', 'nav.report'),
+        ('/analytics', 'bar-chart-3', 'Analytics', 'nav.analytics'),
+        ('/vocabulary', 'book', 'Vocabulary', 'nav.vocabulary'),
+        ('/history', 'clipboard-list', 'History', 'nav.history')
+    ] %}
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar (desktop) -->
+        <aside class="hidden md:flex w-60 flex-col bg-[#1a73e8] text-white fixed inset-y-0 left-0 z-20">
+            <a href="/" class="flex items-center gap-2.5 px-5 h-16 border-b border-white/15 shrink-0">
+                <i data-lucide="code-2" class="w-6 h-6"></i>
+                <span class="font-semibold text-[15px]">English Tutor</span>
+            </a>
+            <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+                {% for href, icon, label, key in nav %}
+                {% set active = (request.url.path == href) or (href != '/' and request.url.path.startswith(href)) %}
+                <a href="{{ href }}"
+                   {% if href == '/report' %}onclick="showGlobalLoading('loading.report')"{% endif %}
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition {{ 'bg-white/15 text-white' if active else 'text-white/85 hover:bg-white/10 hover:text-white' }}">
+                    <i data-lucide="{{ icon }}" class="w-5 h-5 shrink-0 {{ 'text-white' if active else 'text-white/60' }}"></i>
+                    <span data-i18n="{{ key }}">{{ label }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+            <div class="px-3 py-3 border-t border-white/15 shrink-0 space-y-2">
+                <div class="px-2 text-xs text-white/60" data-i18n="footer.tagline">AI-powered technical English practice</div>
+                <button onclick="openOnboarding()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-sm font-medium transition">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    <span data-i18n="onboarding.button">How it works</span>
+                </button>
+                <button onclick="toggleLang()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-sm font-medium transition">
+                    <i data-lucide="languages" class="w-4 h-4"></i>
+                    <span class="js-lang-label">Español</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Content column -->
+        <div class="flex-1 flex flex-col md:ml-60 min-w-0">
+            <!-- Mobile top bar -->
+            <header class="md:hidden bg-[#1a73e8] text-white sticky top-0 z-20">
+                <div class="flex items-center justify-between h-14 px-4">
+                    <a href="/" class="flex items-center gap-2 font-semibold">
+                        <i data-lucide="code-2" class="w-5 h-5"></i> English Tutor
+                    </a>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openOnboarding()" class="flex items-center justify-center w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 transition" aria-label="How it works">
+                            <i data-lucide="help-circle" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="toggleLang()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-xs font-medium transition">
+                            <i data-lucide="languages" class="w-4 h-4"></i>
+                            <span class="js-lang-label">Español</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex space-x-6">
-                    <a href="/" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">🏠</span> Home
+                <nav class="flex gap-1 overflow-x-auto px-2 pb-2">
+                    {% for href, icon, label, key in nav %}
+                    {% set active = (request.url.path == href) or (href != '/' and request.url.path.startswith(href)) %}
+                    <a href="{{ href }}"
+                       {% if href == '/report' %}onclick="showGlobalLoading('loading.report')"{% endif %}
+                       class="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-md text-xs transition {{ 'bg-white/20' if active else 'hover:bg-white/10' }}">
+                        <i data-lucide="{{ icon }}" class="w-4 h-4"></i> <span data-i18n="{{ key }}">{{ label }}</span>
                     </a>
-                    <a href="/stories" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">📚</span> Stories
-                    </a>
-                    <a href="/quiz" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">📝</span> Quiz
-                    </a>
-                    <a href="/report" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">🤖</span> AI Report
-                    </a>
-                    <a href="/analytics" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">📊</span> Analytics
-                    </a>
-                    <a href="/vocabulary" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">📖</span> Vocabulary
-                    </a>
-                    <a href="/history" class="hover:text-blue-200 transition flex items-center">
-                        <span class="mr-1">📋</span> History
-                    </a>
+                    {% endfor %}
+                </nav>
+            </header>
+
+            <main class="flex-1 w-full max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-10">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <div id="global-loading" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[10000] hidden items-center justify-center p-4">
+        <div class="w-full max-w-sm text-center">
+            <div class="relative w-16 h-16 mx-auto mb-6">
+                <div class="absolute inset-0 rounded-full border-4 border-[#e8f0fe]"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-[#1a73e8] border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-[#1a73e8]">
+                    <i data-lucide="sparkles" class="w-6 h-6"></i>
                 </div>
             </div>
+            <h3 class="text-lg font-semibold text-[#202124] mb-1" data-i18n="loading.report.title">Generating your AI report</h3>
+            <p id="global-loading-step" class="text-sm text-[#5f6368] mb-4 min-h-[1.25rem]">Analyzing your conversations…</p>
+            <div class="w-full h-2 bg-[#e8eaed] rounded-full overflow-hidden">
+                <div id="global-loading-bar" class="h-full bg-[#1a73e8] rounded-full transition-all duration-300" style="width: 5%"></div>
+            </div>
+            <div class="text-xs text-[#9aa0a6] mt-2"><span id="global-loading-pct">5</span>%</div>
         </div>
-    </nav>
-    
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        {% block content %}{% endblock %}
-    </main>
+    </div>
+    <script>
+    let _glTimers = [];
+    function showGlobalLoading(key) {
+        const el = document.getElementById('global-loading');
+        if (!el) return;
+        const lang = (typeof currentLang === 'function' && currentLang() === 'es') ? 'es' : 'en';
+
+        const steps = lang === 'es'
+            ? ['Analizando tus conversaciones…', 'Detectando patrones de errores…', 'Evaluando tu gramática…', 'Diseñando tu ruta de aprendizaje…', 'Preparando recomendaciones…']
+            : ['Analyzing your conversations…', 'Detecting mistake patterns…', 'Assessing your grammar…', 'Designing your learning path…', 'Preparing recommendations…'];
+
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+
+        const stepEl = document.getElementById('global-loading-step');
+        const barEl = document.getElementById('global-loading-bar');
+        const pctEl = document.getElementById('global-loading-pct');
+        let i = 0;
+        let pct = 5;
+        if (stepEl) stepEl.textContent = steps[0];
+        if (barEl) barEl.style.width = '5%';
+        if (pctEl) pctEl.textContent = '5';
+
+        _glTimers.forEach(clearInterval);
+        _glTimers = [
+            setInterval(() => {
+                i = (i + 1) % steps.length;
+                if (stepEl) stepEl.textContent = steps[i];
+            }, 1800),
+            setInterval(() => {
+                pct = Math.min(90, pct + 3 + Math.random() * 4);
+                if (barEl) barEl.style.width = pct + '%';
+                if (pctEl) pctEl.textContent = String(Math.round(pct));
+            }, 500)
+        ];
+    }
+    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

@@ -87,7 +87,7 @@ Using DeepSeek API for intelligent analysis:
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10+
 - DeepSeek API key ([Get one here](https://platform.deepseek.com))
 
 ### Installation
@@ -112,8 +112,12 @@ Using DeepSeek API for intelligent analysis:
    Your `.env` file should contain:
    ```env
    DEEPSEEK_API_KEY=your_deepseek_api_key_here
-   SECRET_KEY=your_secret_key_for_flask_sessions
+   DEEPSEEK_MODEL=deepseek-flash
+   SECRET_KEY=your_secret_key_for_sessions
    ```
+
+   `DEEPSEEK_MODEL` defaults to `deepseek-flash`; use `deepseek-v4-pro`
+   for higher-quality responses.
 
 4. **Test API connection** (recommended)
    ```bash
@@ -122,7 +126,7 @@ Using DeepSeek API for intelligent analysis:
 
 5. **Run the application**
    ```bash
-   python app.py
+   python main.py
    ```
 
 6. **Open your browser**
@@ -132,47 +136,55 @@ Using DeepSeek API for intelligent analysis:
 
 ```
 english-tutor-developers/
-├── app.py                 # Main Flask application
-├── config.py             # Configuration settings
-├── requirements.txt      # Python dependencies
-├── test.py              # API connection testing
-├── .gitignore           # Git ignore rules
-├── example.env          # Environment variables template
-├── english_tutor.db     # SQLite database (auto-created)
-├── images/              # Application screenshots
-│   ├── home.jpeg        # Main dashboard overview
-│   ├── home2.jpeg       # AI corrections and features
-│   ├── home3.jpeg       # Personal analysis charts
-│   ├── stories.jpeg     # Scenarios selection
-│   ├── stories2.jpeg    # Chat interface
-│   ├── quizz.jpeg       # Quiz interface
-│   ├── value_quizz.jpeg # Quiz results and scoring
-│   ├── ai_report.jpeg   # AI analysis reports
-│   └── analitics.jpeg   # Analytics dashboard
-├── services/            # Business logic layer
-│   ├── __init__.py      # Services package init
-│   ├── database.py      # Database operations
-│   ├── ai_service.py    # DeepSeek AI integration
-│   └── business_service.py # Core business logic
-├── routes.py            # Flask routes and endpoints
-└── templates/           # HTML templates
-    ├── base.html        # Base template with navigation
-    ├── index.html       # Home page with scenarios
-    ├── chat.html        # Interactive chat interface
-    ├── quiz.html        # Grammar quiz interface
-    ├── report.html      # AI personal analysis report
-    ├── analytics.html   # Progress dashboard
-    ├── vocabulary.html  # Vocabulary manager
-    └── history.html     # Conversation history
+├── main.py                # Development entrypoint (uvicorn)
+├── config.py              # Settings (pydantic-settings)
+├── requirements.txt       # Python dependencies
+├── test.py                # DeepSeek API + structured output test
+├── .gitignore             # Git ignore rules
+├── example.env            # Environment variables template
+├── english_tutor.db       # SQLite database (auto-created)
+├── app/                   # Application package
+│   ├── __init__.py        # create_app() factory
+│   ├── db.py              # SQLite persistence layer
+│   ├── schemas.py         # Pydantic output models
+│   ├── ai.py              # DeepSeek agents (pydantic-ai)
+│   ├── templating.py      # Jinja2 template renderer
+│   ├── services/          # Business logic layer
+│   │   ├── conversation.py  # chat + SSE streaming
+│   │   ├── quiz.py
+│   │   ├── story.py         # interactive stories
+│   │   ├── report.py        # AI personal report
+│   │   ├── analytics.py     # dashboard data
+│   │   └── fallback.py      # offline fallback analysis
+│   └── routes/            # HTTP layer
+│       ├── pages.py       # HTML pages
+│       ├── chat.py        # SSE chat streaming endpoint
+│       ├── quiz.py
+│       └── story.py
+├── static/js/             # Frontend assets
+│   └── sse.js             # Server-Sent Events client helper
+├── templates/             # HTML templates (Jinja2)
+│   ├── base.html          # Base template with navigation
+│   ├── index.html         # Home page with scenarios
+│   ├── chat.html          # Interactive chat interface
+│   ├── quiz.html          # Grammar quiz interface
+│   ├── report.html        # AI personal analysis report
+│   ├── analytics.html     # Progress dashboard
+│   ├── vocabulary.html    # Vocabulary manager
+│   ├── history.html       # Conversation history
+│   └── stories/           # Story templates
+└── images/                # Application screenshots
 ```
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Flask (Python)
+- **Backend**: FastAPI (Python) + Uvicorn
+- **AI Integration**: Pydantic AI with the native DeepSeek provider (typed structured output, retries, streaming)
+- **Streaming**: Server-Sent Events (SSE) for chat and story feedback
 - **Database**: SQLite with comprehensive analytics tables
-- **AI Integration**: DeepSeek API for natural language processing
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
 - **Styling**: Tailwind CSS with custom animations
+- **Icons**: Lucide (SVG icons)
 - **Translation**: MyMemory Translation API with fallback dictionaries
 - **Architecture**: Service-oriented architecture with separation of concerns
 

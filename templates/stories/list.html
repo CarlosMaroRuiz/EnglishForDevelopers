@@ -3,7 +3,7 @@
 <div class="max-w-7xl mx-auto space-y-8">
     <!-- Header -->
     <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold gradient-text mb-4">📚 Interactive Software Stories</h2>
+        <h2 class="text-4xl font-bold gradient-text mb-4"><i data-lucide="book-open"></i> <span data-i18n="stories.title">Interactive Software Stories</span></h2>
         <p class="text-xl text-gray-600">Learn English through engaging software development scenarios</p>
         <p class="text-sm text-gray-500 mt-2">Practice real workplace situations while improving your technical English</p>
     </div>
@@ -12,20 +12,18 @@
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center space-x-4">
-                <span class="text-2xl">⚡</span>
+                <span class="text-2xl"><i data-lucide="zap"></i></span>
                 <div>
                     <h3 class="text-lg font-semibold text-gray-800">Quick Actions</h3>
                     <p class="text-gray-600 text-sm">Create or generate new stories</p>
                 </div>
             </div>
             <div class="flex space-x-3">
-                <button onclick="showCreateStoryModal()" 
-                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    ✍️ Create Story
+                 <button onclick="showCreateStoryModal()" class="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i data-lucide="pen-tool"></i> Create Story
                 </button>
-                <button onclick="showGenerateStoryModal()" 
-                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium">
-                    🤖 AI Generate
+                 <button onclick="showGenerateStoryModal()" class="inline-flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    <i data-lucide="bot"></i> AI Generate
                 </button>
             </div>
         </div>
@@ -73,9 +71,8 @@
             </div>
         </div>
         <div class="mt-4 flex justify-between items-center">
-            <button onclick="clearFilters()" 
-                    class="text-gray-600 hover:text-gray-800 text-sm">
-                🔄 Clear Filters
+             <button onclick="clearFilters()" class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-800 text-sm">
+                <i data-lucide="refresh-cw"></i> Clear Filters
             </button>
             <div class="text-sm text-gray-600">
                 <span id="stories-count">{{ stories|length }}</span> stories available
@@ -95,8 +92,7 @@
             <div class="relative">
                 <!-- Difficulty Badge -->
                 <div class="absolute top-4 right-4 z-10">
-                    <span class="px-3 py-1 rounded-full text-xs font-medium
-                        {% if story.difficulty_level == 'beginner' %}bg-green-100 text-green-800
+                    <span class="px-3 py-1 rounded-full text-xs font-medium {% if story.difficulty_level == 'beginner' %}bg-green-100 text-green-800
                         {% elif story.difficulty_level == 'intermediate' %}bg-yellow-100 text-yellow-800
                         {% else %}bg-red-100 text-red-800{% endif %}">
                         {{ story.difficulty_level.title() }}
@@ -108,40 +104,30 @@
                 <div class="absolute top-4 left-4 z-10">
                     {% if user_progress[story.id]['is_completed'] %}
                     <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        ✅ Completed
+                        <i data-lucide="circle-check"></i> Completed
                     </span>
                     {% else %}
                     <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        🔄 {{ user_progress[story.id]['completion_percentage']|round }}%
+                        <i data-lucide="refresh-cw"></i> {{ user_progress[story.id]['completion_percentage']|round }}%
                     </span>
                     {% endif %}
                 </div>
                 {% endif %}
 
                 <!-- Scenario Background -->
-                <div class="h-32 bg-gradient-to-br 
-                    {% if story.scenario == 'debugging_session' %}from-red-400 to-red-600
-                    {% elif story.scenario == 'code_review' %}from-blue-400 to-blue-600
-                    {% elif story.scenario == 'technical_interview' %}from-purple-400 to-purple-600
-                    {% elif story.scenario == 'daily_standup' %}from-green-400 to-green-600
-                    {% elif story.scenario == 'project_planning' %}from-yellow-400 to-yellow-600
-                    {% elif story.scenario == 'client_meeting' %}from-indigo-400 to-indigo-600
-                    {% elif story.scenario == 'architecture_discussion' %}from-teal-400 to-teal-600
-                    {% elif story.scenario == 'deployment_issue' %}from-orange-400 to-orange-600
-                    {% else %}from-gray-400 to-gray-600{% endif %}
-                    flex items-center justify-center">
+                <div class="h-32 bg-[#1a73e8] flex items-center justify-center">
                     
                     <div class="text-center text-white">
                         <div class="text-3xl mb-2">
-                            {% if story.scenario == 'debugging_session' %}🐛
-                            {% elif story.scenario == 'code_review' %}🔍
-                            {% elif story.scenario == 'technical_interview' %}💼
-                            {% elif story.scenario == 'daily_standup' %}📅
-                            {% elif story.scenario == 'project_planning' %}📋
-                            {% elif story.scenario == 'client_meeting' %}🤝
-                            {% elif story.scenario == 'architecture_discussion' %}🏗️
-                            {% elif story.scenario == 'deployment_issue' %}🚀
-                            {% else %}📚{% endif %}
+                            {% if story.scenario == 'debugging_session' %}<i data-lucide="bug"></i>
+                            {% elif story.scenario == 'code_review' %}<i data-lucide="search"></i>
+                            {% elif story.scenario == 'technical_interview' %}<i data-lucide="briefcase"></i>
+                            {% elif story.scenario == 'daily_standup' %}<i data-lucide="calendar"></i>
+                            {% elif story.scenario == 'project_planning' %}<i data-lucide="clipboard-list"></i>
+                            {% elif story.scenario == 'client_meeting' %}<i data-lucide="handshake"></i>
+                            {% elif story.scenario == 'architecture_discussion' %}<i data-lucide="building-2"></i>
+                            {% elif story.scenario == 'deployment_issue' %}<i data-lucide="rocket"></i>
+                            {% else %}<i data-lucide="book-open"></i>{% endif %}
                         </div>
                         <div class="text-sm font-medium capitalize">
                             {{ story.scenario.replace('_', ' ') }}
@@ -177,24 +163,24 @@
                 <div class="flex space-x-2">
                     {% if user_progress.get(story.id) and not user_progress[story.id]['is_completed'] %}
                     <a href="/stories/{{ story.id }}" 
-                       class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
-                        📖 Continue
+                       class="flex-1 inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        <i data-lucide="book"></i> Continue
                     </a>
                     {% elif user_progress.get(story.id) and user_progress[story.id]['is_completed'] %}
                     <a href="/stories/{{ story.id }}" 
-                       class="flex-1 bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
-                        🔄 Review
+                       class="flex-1 inline-flex items-center justify-center gap-1.5 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        <i data-lucide="refresh-cw"></i> Review
                     </a>
                     {% else %}
                     <a href="/stories/{{ story.id }}" 
-                       class="flex-1 bg-purple-600 text-white text-center py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
-                        🚀 Start
+                       class="flex-1 inline-flex items-center justify-center gap-1.5 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                        <i data-lucide="rocket"></i> Start
                     </a>
                     {% endif %}
                     
                     <button onclick="showStoryPreview({{ story.id }})" 
-                            class="bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors text-sm">
-                        👁️
+                            class="inline-flex items-center justify-center bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                        <i data-lucide="eye"></i>
                     </button>
                 </div>
             </div>
@@ -204,7 +190,7 @@
 
     <!-- Empty State -->
     <div id="empty-state" class="hidden text-center py-12">
-        <div class="text-6xl mb-4">📚</div>
+        <div class="text-6xl mb-4"><i data-lucide="book-open"></i></div>
         <h3 class="text-xl font-semibold text-gray-800 mb-2">No stories found</h3>
         <p class="text-gray-600 mb-6">Try adjusting your filters or create a new story</p>
         <button onclick="clearFilters()" 
@@ -228,7 +214,7 @@
     <div class="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold text-gray-800">✍️ Create New Story</h3>
+                <h3 class="text-xl font-bold text-gray-800"><i data-lucide="pen-tool"></i> Create New Story</h3>
                 <button onclick="hideCreateStoryModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -295,7 +281,7 @@
     <div class="bg-white rounded-xl max-w-2xl w-full">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold text-gray-800">🤖 AI Story Generator</h3>
+                <h3 class="text-xl font-bold text-gray-800"><i data-lucide="bot"></i> AI Story Generator</h3>
                 <button onclick="hideGenerateStoryModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -379,7 +365,7 @@
             
             <div class="flex space-x-3">
                 <button type="submit" class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium">
-                    🤖 Generate Story
+                    <i data-lucide="bot"></i> Generate Story
                 </button>
                 <button type="button" onclick="hideGenerateStoryModal()" 
                         class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium">
@@ -592,12 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Add custom styles
 const style = document.createElement('style');
 style.textContent = `
-    .gradient-text {
-        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+    .gradient-text { color: #1a73e8; }
     
     .line-clamp-2 {
         display: -webkit-box;

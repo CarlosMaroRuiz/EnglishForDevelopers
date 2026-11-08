@@ -3,7 +3,7 @@
 <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold gradient-text mb-4">✍️ Create Your Own Story</h2>
+        <h2 class="text-4xl font-bold gradient-text mb-4"><i data-lucide="pen-tool"></i> <span data-i18n="stories.create.title">Create Your Own Story</span></h2>
         <p class="text-xl text-gray-600">Design custom learning experiences for English practice</p>
         <p class="text-sm text-gray-500 mt-2">Create engaging stories that help you practice specific scenarios</p>
     </div>
@@ -13,7 +13,7 @@
         <!-- Manual Creation -->
         <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
             <div class="flex items-center mb-4">
-                <span class="text-3xl mr-3">✍️</span>
+                <span class="text-3xl mr-3"><i data-lucide="pen-tool"></i></span>
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Manual Creation</h3>
                     <p class="text-gray-600 text-sm">Write your own story content</p>
@@ -28,7 +28,7 @@
         <!-- AI Generation -->
         <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
             <div class="flex items-center mb-4">
-                <span class="text-3xl mr-3">🤖</span>
+                <span class="text-3xl mr-3"><i data-lucide="bot"></i></span>
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">AI Generation</h3>
                     <p class="text-gray-600 text-sm">Let AI create a personalized story</p>
@@ -44,7 +44,7 @@
     <!-- Manual Creation Form -->
     <div id="manual-form" class="bg-white rounded-xl shadow-lg p-8 hidden">
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-2xl font-bold text-gray-800">✍️ Write Your Story</h3>
+            <h3 class="text-2xl font-bold text-gray-800"><i data-lucide="pen-tool"></i> Write Your Story</h3>
             <button onclick="hideAllForms()" class="text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -150,7 +150,7 @@
             <!-- Submit Buttons -->
             <div class="flex space-x-4 pt-6 border-t border-gray-200">
                 <button type="submit" class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    📝 Create Story
+                    <i data-lucide="pencil-line"></i> Create Story
                 </button>
                 <button type="button" onclick="hideAllForms()" class="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition-colors font-medium">
                     Cancel
@@ -162,7 +162,7 @@
     <!-- AI Generation Form -->
     <div id="ai-form" class="bg-white rounded-xl shadow-lg p-8 hidden">
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-2xl font-bold text-gray-800">🤖 AI Story Generator</h3>
+            <h3 class="text-2xl font-bold text-gray-800"><i data-lucide="bot"></i> AI Story Generator</h3>
             <button onclick="hideAllForms()" class="text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -269,7 +269,7 @@
             <!-- Submit Buttons -->
             <div class="flex space-x-4 pt-6 border-t border-gray-200">
                 <button type="submit" class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-medium">
-                    🤖 Generate Story
+                    <i data-lucide="bot"></i> Generate Story
                 </button>
                 <button type="button" onclick="hideAllForms()" class="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition-colors font-medium">
                     Cancel
@@ -280,7 +280,7 @@
 
     <!-- Quick Tips -->
     <div class="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-200">
-        <h4 class="text-lg font-semibold text-blue-800 mb-3">💡 Story Creation Tips</h4>
+        <h4 class="text-lg font-semibold text-blue-800 mb-3"><i data-lucide="lightbulb"></i> Story Creation Tips</h4>
         <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
             <div>
                 <h5 class="font-medium mb-2">For Manual Stories:</h5>
@@ -440,12 +440,7 @@ function hideLoading() {
 // Add custom styles
 const style = document.createElement('style');
 style.textContent = `
-    .gradient-text {
-        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+    .gradient-text { color: #1a73e8; }
     
     .animate-spin {
         animation: spin 1s linear infinite;

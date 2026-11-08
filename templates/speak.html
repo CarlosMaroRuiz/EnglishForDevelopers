@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl md:text-3xl font-semibold text-[#202124]" data-i18n="speak.title">Speak with AI</h1>
+        <p class="text-[#5f6368] mt-1" data-i18n="speak.subtitle">Speak in English and the AI will answer in voice. Best in Chrome or Edge.</p>
+    </div>
+
+    <div class="bg-white border border-[#e8eaed] rounded-xl overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[#e8eaed] bg-[#f8f9fa]">
+            <select id="scenario-select" class="border border-[#dadce0] rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="daily_standup">Daily Standup</option>
+                <option value="code_review">Code Review</option>
+                <option value="technical_interview">Technical Interview</option>
+                <option value="debugging_session">Debugging Session</option>
+                <option value="project_planning">Project Planning</option>
+                <option value="client_meeting">Client Meeting</option>
+                <option value="architecture_discussion">Architecture Discussion</option>
+                <option value="deployment_issue">Deployment Issue</option>
+            </select>
+            <label class="flex items-center gap-2 text-sm text-[#5f6368]">
+                <input type="checkbox" id="voice-toggle" checked class="rounded">
+                <span data-i18n="speak.voice">Voice reply</span>
+            </label>
+        </div>
+
+        <div id="conversation" class="h-96 overflow-y-auto p-4 space-y-4">
+            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="bot" class="w-4 h-4 text-blue-800"></i>
+                    <span class="font-semibold text-blue-800 text-sm">AI Tutor</span>
+                </div>
+                <div class="text-gray-800">Press the microphone and say "Good morning" to start.</div>
+            </div>
+        </div>
+
+        <div class="border-t border-[#e8eaed] p-4">
+            <div id="status" class="text-sm text-[#5f6368] mb-3 text-center">Press the mic and speak in English.</div>
+            <div class="flex items-center gap-3">
+                <button id="mic-btn" onclick="toggleMic()" title="Speak"
+                        class="shrink-0 inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#1a73e8] text-white hover:bg-[#1765cc] transition shadow">
+                    <i data-lucide="mic" class="w-6 h-6"></i>
+                </button>
+                <input id="text-input" type="text" placeholder="Or type here and press Send…"
+                       class="flex-1 border border-[#dadce0] rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1a73e8]">
+                <button onclick="sendText()"
+                        class="shrink-0 inline-flex items-center gap-2 bg-[#1a73e8] text-white px-5 py-3 rounded-full hover:bg-[#1765cc] transition font-medium">
+                    <i data-lucide="send" class="w-4 h-4"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback-panel" class="mt-4 bg-white border border-[#e8eaed] rounded-xl p-4 hidden">
+        <div class="font-semibold text-[#202124] mb-2">Feedback</div>
+        <div id="feedback-content" class="space-y-2"></div>
+    </div>
+</div>
+
+<script>
+let currentScenario = 'daily_standup';
+let listening = false;
+
+const conversationEl = document.getElementById('conversation');
+const statusEl = document.getElementById('status');
+const micBtn = document.getElementById('mic-btn');
+
+document.getElementById('scenario-select').addEventListener('change', function () {
+    currentScenario = this.value;
+});
+
+// ---------------- Speech recognition ----------------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let finalTranscript = '';
+
+if (SR) {
+    recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onresult = function (e) {
+        let interim = '';
+        let final = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) final += t; else interim += t;
+        }
+        if (interim) statusEl.textContent = interim;
+        if (final) {
+            finalTranscript = final.trim();
+            statusEl.textContent = finalTranscript;
+            recognition.stop();
+        }
+    };
+    recognition.onend = function () {
+        listening = false;
+        updateMic();
+        if (finalTranscript) {
+            const text = finalTranscript;
+            finalTranscript = '';
+            addBubble('user', text);
+            streamAI(text);
+        }
+    };
+    recognition.onerror = function (e) {
+        listening = false;
+        updateMic();
+        if (e.error === 'network') {
+            statusEl.textContent = 'Voz no disponible: el navegador no pudo conectar con el servicio de voz (requiere internet). Escribe tu respuesta abajo.';
+        } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            statusEl.textContent = 'Permiso de micrófono denegado. Actívalo en el navegador o escribe tu respuesta.';
+        } else {
+            statusEl.textContent = 'Microphone error: ' + e.error;
+        }
+    };
+}
+
+function toggleMic() {
+    if (!recognition) {
+        statusEl.textContent = 'Voice is not supported here. Use Chrome or Edge.';
+        return;
+    }
+    if (listening) {
+        recognition.stop();
+    } else {
+        finalTranscript = '';
+        statusEl.textContent = 'Listening… speak in English';
+        recognition.start();
+        listening = true;
+        updateMic();
+    }
+}
+
+function updateMic() {
+    micBtn.classList.toggle('bg-red-500', listening);
+    micBtn.classList.toggle('bg-[#1a73e8]', !listening);
+}
+
+function sendText() {
+    const input = document.getElementById('text-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addBubble('user', text);
+    streamAI(text);
+}
+
+// ---------------- Conversation ----------------
+function addBubble(sender, text) {
+    const isUser = sender === 'user';
+    const div = document.createElement('div');
+    div.className = (isUser
+        ? 'bg-green-50 border-green-200 ml-8'
+        : 'bg-blue-50 border-blue-200 mr-8') + ' border p-4 rounded-lg animate-slide-up';
+
+    const label = isUser ? 'You' : 'AI Tutor';
+    const color = isUser ? 'text-green-800' : 'text-blue-800';
+    const id = 'bubble-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+
+    div.innerHTML = '<div class="flex items-center gap-2 mb-1">' +
+        '<span class="font-semibold ' + color + ' text-sm">' + label + '</span></div>' +
+        '<div id="' + id + '" class="text-gray-800 leading-relaxed">' + (text || '') + '</div>';
+    conversationEl.appendChild(div);
+    conversationEl.scrollTop = conversationEl.scrollHeight;
+    return id;
+}
+
+function setBubbleText(id, text) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = text;
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+    }
+}
+
+async function streamAI(text) {
+    const id = addBubble('ai', '');
+    let full = '';
+    spokenLen = 0;
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+
+    await streamSSE('/api/chat/stream', { message: text, scenario: currentScenario }, {
+        delta: function (e) {
+            full = e.text || '';
+            setBubbleText(id, full);
+            speakNewText(full);
+        },
+        done: function (e) {
+            const a = e.analysis || {};
+            full = a.conversation_response || full;
+            setBubbleText(id, full);
+            flushSpeech(full);
+            showFeedback(a);
+        },
+        error: function (err) {
+            setBubbleText(id, 'Error: ' + err.message);
+        }
+    });
+}
+
+// ---------------- Text to speech ----------------
+let _voices = [];
+
+function _loadVoices() {
+    if ('speechSynthesis' in window) {
+        _voices = window.speechSynthesis.getVoices();
+    }
+}
+
+if ('speechSynthesis' in window) {
+    _loadVoices();
+    window.speechSynthesis.onvoiceschanged = _loadVoices;
+}
+
+function _voiceScore(v) {
+    const n = (v.name || '').toLowerCase();
+    let s = 0;
+    if (n.indexOf('google') !== -1) s += 5;      // Chrome neural voices
+    if (n.indexOf('natural') !== -1) s += 4;     // Microsoft neural voices
+    if (n.indexOf('neural') !== -1) s += 4;
+    if (n.indexOf('online') !== -1) s += 3;
+    if (v.lang === 'en-US') s += 2;
+    if (n.indexOf('female') !== -1) s += 1;      // usually nicer for a tutor
+    return s;
+}
+
+function pickEnglishVoice() {
+    if (!_voices.length && 'speechSynthesis' in window) {
+        _voices = window.speechSynthesis.getVoices();
+    }
+    if (!_voices.length) return null;
+
+    const english = _voices.filter(function (v) {
+        return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
+    });
+    if (!english.length) return null;
+
+    english.sort(function (a, b) {
+        return _voiceScore(b) - _voiceScore(a);
+    });
+    return english[0];
+}
+
+let spokenLen = 0;
+
+function voiceEnabled() {
+    return document.getElementById('voice-toggle').checked && ('speechSynthesis' in window);
+}
+
+function speakUtterance(text) {
+    if (!voiceEnabled()) return;
+    const t = (text || '').trim();
+    if (!t) return;
+    const u = new SpeechSynthesisUtterance(t);
+    const voice = pickEnglishVoice();
+    if (voice) {
+        u.voice = voice;
+        u.lang = voice.lang;
+    } else {
+        u.lang = 'en-US';
+    }
+    u.rate = 0.92;
+    u.pitch = 1.0;
+    speechSynthesis.speak(u);
+}
+
+// Speak each complete sentence as it streams in, so the AI starts talking fast.
+function speakNewText(fullText) {
+    if (!voiceEnabled()) return;
+    const newPart = fullText.slice(spokenLen);
+    if (!newPart) return;
+
+    let lastEnd = 0;
+    const re = /[^.!?\n]+[.!?]+/g;
+    let m;
+    while ((m = re.exec(newPart)) !== null) {
+        speakUtterance(m[0]);
+        lastEnd = m.index + m[0].length;
+    }
+    if (lastEnd > 0) spokenLen += lastEnd;
+}
+
+function flushSpeech(fullText) {
+    if (!voiceEnabled()) return;
+    const rest = fullText.slice(spokenLen);
+    if (rest.trim()) speakUtterance(rest);
+    spokenLen = fullText.length;
+}
+
+// ---------------- Feedback ----------------
+function showFeedback(a) {
+    const panel = document.getElementById('feedback-panel');
+    const content = document.getElementById('feedback-content');
+    const corrections = a.corrections || [];
+    const vocab = a.new_vocabulary || [];
+
+    if (!corrections.length && !vocab.length) {
+        panel.classList.add('hidden');
+        return;
+    }
+
+    panel.classList.remove('hidden');
+    let html = '';
+
+    corrections.forEach(function (c) {
+        html += '<div class="flex flex-wrap items-center gap-2 text-sm">' +
+            '<span class="text-red-600 line-through">' + (c.original || '') + '</span>' +
+            '<i data-lucide="arrow-right" class="w-4 h-4 text-gray-400"></i>' +
+            '<span class="text-green-600 font-medium">' + (c.corrected || '') + '</span>' +
+            '</div>';
+    });
+
+    vocab.forEach(function (v) {
+        html += '<div class="text-sm"><span class="font-semibold text-[#1a73e8]">' + (v.word || '') + '</span> — ' + (v.definition || '') + '</div>';
+    });
+
+    content.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+</script>
+{% endblock %}

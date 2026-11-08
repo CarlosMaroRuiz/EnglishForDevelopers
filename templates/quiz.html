@@ -3,7 +3,7 @@
 <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold gradient-text mb-4">📝 Grammar Practice Quiz</h2>
+        <h2 class="text-4xl font-bold gradient-text mb-4"><i data-lucide="pencil-line"></i> <span data-i18n="quiz.title">Grammar Practice Quiz</span></h2>
         <p class="text-xl text-gray-600">Test your English grammar skills with personalized questions</p>
         <p class="text-sm text-gray-500 mt-2">Based on your most common mistakes and areas for improvement</p>
     </div>
@@ -15,7 +15,7 @@
         <p class="text-gray-600">Analyzing your learning patterns to create the perfect practice session...</p>
         <div class="mt-4 bg-blue-50 p-4 rounded-lg">
             <div class="flex items-center justify-center text-sm text-blue-700">
-                <span class="mr-2">🧠</span>
+                <span class="mr-2"><i data-lucide="brain"></i></span>
                 <span>Creating questions based on your most common mistakes</span>
             </div>
         </div>
@@ -24,7 +24,7 @@
     <!-- Quiz Container -->
     <div id="quiz-container" class="bg-white rounded-xl shadow-xl hidden">
         <!-- Quiz Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-xl">
+        <div class="bg-blue-600 text-white p-6 rounded-t-xl">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-2xl font-bold">Grammar Assessment</h2>
@@ -74,7 +74,7 @@
     <div id="results-panel" class="mt-6 bg-white rounded-xl shadow-xl border border-gray-200 p-6 hidden">
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <h3 class="text-2xl font-bold text-gray-800 flex items-center">
-                <span class="mr-3">📊</span>
+                <span class="mr-3"><i data-lucide="bar-chart-3"></i></span>
                 Quiz Results
             </h3>
             <button onclick="document.getElementById('results-panel').classList.add('hidden')" 
@@ -87,15 +87,15 @@
         
         <!-- Score Summary -->
         <div class="grid md:grid-cols-3 gap-6 mb-8">
-            <div class="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+            <div class="text-center p-6 bg-green-50 rounded-xl border border-green-200">
                 <div class="text-4xl font-bold text-green-600 mb-2" id="score-display">0%</div>
                 <div class="text-green-700 font-medium">Final Score</div>
             </div>
-            <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+            <div class="text-center p-6 bg-blue-50 rounded-xl border border-blue-200">
                 <div class="text-4xl font-bold text-blue-600 mb-2" id="correct-display">0/0</div>
                 <div class="text-blue-700 font-medium">Correct Answers</div>
             </div>
-            <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
+            <div class="text-center p-6 bg-purple-50 rounded-xl border border-purple-200">
                 <div class="text-4xl font-bold text-purple-600 mb-2" id="level-display">Beginner</div>
                 <div class="text-purple-700 font-medium">Your Level</div>
             </div>
@@ -108,7 +108,7 @@
         
         <!-- Detailed Results -->
         <div class="mb-6">
-            <h4 class="text-lg font-bold text-gray-800 mb-4">📝 Detailed Review</h4>
+            <h4 class="text-lg font-bold text-gray-800 mb-4"><i data-lucide="pencil-line"></i> Detailed Review</h4>
             <div id="detailed-results" class="space-y-4">
                 <!-- Detailed results will be populated here -->
             </div>
@@ -116,7 +116,7 @@
         
         <!-- Focus Areas -->
         <div id="focus-areas-section" class="mb-6 hidden">
-            <h4 class="text-lg font-bold text-gray-800 mb-4">🎯 Areas to Focus On</h4>
+            <h4 class="text-lg font-bold text-gray-800 mb-4"><i data-lucide="target"></i> Areas to Focus On</h4>
             <div id="focus-areas" class="flex flex-wrap gap-2">
                 <!-- Focus areas will be populated here -->
             </div>
@@ -124,17 +124,14 @@
         
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-4 justify-center">
-            <button onclick="retakeQuiz()" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                🔄 Take Another Quiz
+             <button onclick="retakeQuiz()" class="inline-flex items-center gap-1.5 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i data-lucide="refresh-cw"></i> Take Another Quiz
             </button>
-            <button onclick="viewAnalytics()" 
-                    class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold">
-                📊 View Analytics
+             <button onclick="viewAnalytics()" class="inline-flex items-center gap-1.5 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                <i data-lucide="bar-chart-3"></i> View Analytics
             </button>
-            <button onclick="practiceMore()" 
-                    class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                💬 Practice Conversations
+             <button onclick="practiceMore()" class="inline-flex items-center gap-1.5 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                <i data-lucide="messages-square"></i> Practice Conversations
             </button>
         </div>
     </div>
@@ -189,7 +186,7 @@ async function generateQuiz() {
         console.error('Error generating quiz:', error);
         document.getElementById('loading-state').innerHTML = `
             <div class="text-center">
-                <div class="text-4xl mb-4">❌</div>
+                <div class="text-4xl mb-4"></div>
                 <h3 class="text-xl font-semibold text-red-600 mb-2">Error Loading Quiz</h3>
                 <p class="text-gray-600 mb-4">${error.message}</p>
                 <button onclick="location.reload()" 
@@ -385,7 +382,7 @@ function displayResults(results) {
     feedbackDiv.className = `mb-6 p-4 rounded-lg border-l-4 ${feedbackClass}`;
     feedbackDiv.innerHTML = `
         <div class="flex items-center">
-            <span class="text-2xl mr-3">${results.score >= 70 ? '🎉' : results.score >= 50 ? '👍' : '💪'}</span>
+            <span class="text-2xl mr-3">${results.score >= 70 ? '' : results.score >= 50 ? '' : ''}</span>
             <div>
                 <div class="font-semibold text-gray-800">${results.feedback}</div>
                 <div class="text-sm text-gray-600 mt-1">
@@ -409,11 +406,11 @@ function displayResults(results) {
                         ${!result.is_correct ? `| Correct: <span class="font-medium text-green-600">${result.correct_answer.toUpperCase()}</span>` : ''}
                     </div>
                 </div>
-                <span class="text-2xl ml-4">${result.is_correct ? '✅' : '❌'}</span>
+                <span class="text-2xl ml-4">${result.is_correct ? '' : ''}</span>
             </div>
             ${!result.is_correct ? `
                 <div class="mt-3 p-3 bg-white rounded border border-gray-200">
-                    <div class="text-sm text-gray-600 mb-1">💡 Explanation:</div>
+                    <div class="text-sm text-gray-600 mb-1"> Explanation:</div>
                     <div class="text-sm text-gray-800">${result.explanation}</div>
                 </div>
             ` : ''}
@@ -516,12 +513,7 @@ style.textContent = `
         }
     }
     
-    .gradient-text {
-        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+    .gradient-text { color: #1a73e8; }
     
     .animate-spin {
         animation: spin 1s linear infinite;

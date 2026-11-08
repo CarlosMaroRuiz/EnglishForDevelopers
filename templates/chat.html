@@ -2,32 +2,57 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <div class="bg-white rounded-lg shadow-lg">
-        <div class="bg-code-blue text-white p-4 rounded-t-lg">
-            <h2 class="text-xl font-bold capitalize">{{ scenario.replace('_', ' ') }} Practice</h2>
-            <p class="text-blue-200 text-sm">Practice your English in this workplace scenario</p>
+        <div class="bg-[#1a73e8] text-white p-4 rounded-t-lg">
+            <h2 class="text-xl font-semibold capitalize">{{ scenario.replace('_', ' ') }} Practice</h2>
+            <p class="text-white/80 text-sm" data-i18n="chat.subtitle">Reply in English — the AI tutor will correct your grammar and vocabulary in real time.</p>
         </div>
         
         <div id="chat-container" class="h-96 overflow-y-auto p-4 space-y-4">
             <div class="bg-blue-50 p-4 rounded-lg">
-                <div class="font-semibold text-blue-800 mb-2">🤖 AI Tutor</div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="font-semibold text-blue-800 flex items-center gap-2"><i data-lucide="bot" class="w-4 h-4"></i> AI Tutor</div>
+                    <button onclick="translateChatMessage('scenario-intro', this)"
+                            class="inline-flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">
+                        <i data-lucide="languages" class="w-4 h-4"></i> ES
+                    </button>
+                </div>
                 <div id="scenario-intro">Loading scenario...</div>
+                <div id="scenario-intro-es" class="text-blue-600 text-sm mt-3 hidden italic border-t border-gray-200 pt-2"></div>
             </div>
         </div>
         
         <div class="border-t p-4">
+            <!-- AI suggested reply -->
+            <div id="suggestion-panel" class="hidden mb-3 bg-[#e8f0fe] border border-[#c6dafc] rounded-lg p-3">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wide text-[#174ea6]">Suggested reply · AI</span>
+                    <button onclick="document.getElementById('suggestion-panel').classList.add('hidden')" class="text-[#5f6368] hover:text-[#202124] leading-none" aria-label="Close">&times;</button>
+                </div>
+                <div id="suggestion-en" class="text-[#202124] text-sm"></div>
+                <div id="suggestion-es" class="text-[#5f6368] text-sm italic mt-1"></div>
+                <button onclick="useSuggestion()" class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-white bg-[#1a73e8] hover:bg-[#1765cc] px-3 py-1.5 rounded-lg transition">
+                    <i data-lucide="corner-down-left" class="w-4 h-4"></i> Usar esta respuesta
+                </button>
+            </div>
             <div class="flex space-x-2">
                 <input type="text" 
                        id="message-input" 
-                       placeholder="Type your message here..."
-                       class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Reply in English… (e.g. I worked on the login API yesterday)"
+                       class="flex-1 border border-gray-300 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1a73e8] focus:border-[#1a73e8]"
                        onkeypress="handleKeyPress(event)">
                 <button onclick="sendMessage()" 
-                        class="bg-code-blue text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition">
-                    Send
+                        class="inline-flex items-center gap-2 bg-[#1a73e8] text-white px-5 py-2.5 rounded-full hover:bg-[#1765cc] transition font-medium">
+                    <i data-lucide="send" class="w-4 h-4"></i> Send
                 </button>
             </div>
-            <!-- Translation Toggle -->
-            <div class="mt-2 flex items-center justify-end">
+            <!-- Helper + Translation Toggle -->
+            <div class="mt-2 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs text-gray-500">Press <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px]">Enter</kbd> to send</span>
+                    <button onclick="suggestReply()" id="suggest-btn" class="inline-flex items-center gap-1.5 text-xs font-medium text-[#1a73e8] hover:underline disabled:opacity-50">
+                        <i data-lucide="lightbulb" class="w-4 h-4"></i> Sugerir respuesta
+                    </button>
+                </div>
                 <label class="flex items-center text-sm text-gray-600">
                     <input type="checkbox" id="auto-translate" class="mr-2 rounded">
                     Auto-traducir respuestas del AI
@@ -40,7 +65,7 @@
     <div id="corrections-panel" class="mt-6 bg-white rounded-xl shadow-xl border border-gray-200 p-6 hidden">
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <h3 class="text-2xl font-bold text-gray-800 flex items-center">
-                <span class="mr-3">🎯</span>
+                <span class="mr-3"><i data-lucide="target"></i></span>
                 Learning Feedback
             </h3>
             <button onclick="document.getElementById('corrections-panel').classList.add('hidden')" 
@@ -53,7 +78,7 @@
         <div id="corrections-content" class="space-y-6"></div>
         <div class="mt-6 pt-4 border-t border-gray-200">
             <div class="flex items-center justify-center text-sm text-gray-500">
-                <span class="mr-2">💪</span>
+                <span class="mr-2"><i data-lucide="trending-up"></i></span>
                 Keep practicing to improve your technical English!
             </div>
         </div>
@@ -82,7 +107,9 @@ window.onload = function() {
         'deployment_issue': "The deployment failed and the site is down. How should we approach this situation?"
     };
     
-    document.getElementById('scenario-intro').textContent = scenarioIntros[scenario] || "Let's start our conversation!";
+    const introText = scenarioIntros[scenario] || "Let's start our conversation!";
+    document.getElementById('scenario-intro').textContent = introText;
+    window._lastAiMessage = introText;
 };
 
 function handleKeyPress(event) {
@@ -101,10 +128,10 @@ async function sendMessage() {
     
     // Show enhanced typing indicator
     const typingDiv = document.createElement('div');
-    typingDiv.className = 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
+    typingDiv.className = 'bg-blue-50  border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
     typingDiv.innerHTML = `
         <div class="flex items-center mb-3">
-            <div class="font-bold text-blue-800 text-sm uppercase tracking-wide">🤖 AI Tutor</div>
+            <div class="font-bold text-blue-800 text-sm uppercase tracking-wide"> AI Tutor</div>
             <div class="ml-2 text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
         </div>
         <div class="flex items-center space-x-2">
@@ -119,98 +146,80 @@ async function sendMessage() {
     chatContainer.appendChild(typingDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
+    let aiMessageEl = null;
+    let aiMessageId = null;
+    let streamedText = '';
+
     try {
-        const response = await fetch('/send_message', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: message,
-                scenario: scenario
-            })
-        });
-        
-        // Check if response is ok
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // Debug: log the received data
-        console.log('Received data:', data);
-        
-        // Check if the data contains raw JSON as a string (the problem we're fixing)
-        let processedData = data;
-        if (typeof data.conversation_response === 'string' && data.conversation_response.includes('```json')) {
-            console.log('Found JSON in markdown format, processing...');
-            
-            // Extract JSON from markdown
-            let jsonContent = data.conversation_response;
-            if (jsonContent.startsWith('```json')) {
-                jsonContent = jsonContent.substring(7); // Remove ```json
-            }
-            if (jsonContent.endsWith('```')) {
-                jsonContent = jsonContent.slice(0, -3); // Remove ```
-            }
-            jsonContent = jsonContent.trim();
-            
-            try {
-                processedData = JSON.parse(jsonContent);
-                console.log('Successfully parsed embedded JSON:', processedData);
-            } catch (e) {
-                console.error('Failed to parse embedded JSON:', e);
-                // Keep original data if parsing fails
-            }
-        }
-        
-        // Remove typing indicator
-        typingDiv.remove();
-        
-        // Validate data structure
-        if (!processedData || typeof processedData !== 'object') {
-            throw new Error('Invalid response format');
-        }
-        
-        // Add AI response with animation
-        const responseDiv = addMessageToChat('ai', processedData.conversation_response || 'Sorry, I received an invalid response.');
-        
-        // Auto-translate if enabled
-        const autoTranslate = document.getElementById('auto-translate').checked;
-        if (autoTranslate) {
-            // Find the translate button in the new message and click it
-            setTimeout(() => {
-                const translateButton = responseDiv.querySelector('button[onclick*="translateChatMessage"]');
-                if (translateButton) {
-                    translateButton.click();
+        await streamSSE('/api/chat/stream', { message: message, scenario: scenario }, {
+            delta: (event) => {
+                if (typingDiv.parentNode) typingDiv.remove();
+                if (!aiMessageEl) {
+                    const res = addMessageToChat('ai', '');
+                    aiMessageEl = res.el;
+                    aiMessageId = res.id;
                 }
-            }, 500);
-        }
-        
-        // Show corrections with delay for better UX
-        setTimeout(() => {
-            showCorrections(processedData);
-        }, 800);
-        
+                streamedText = event.text || '';
+                const textEl = document.getElementById(aiMessageId);
+                if (textEl) textEl.textContent = streamedText;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            },
+            done: (event) => {
+                if (typingDiv.parentNode) typingDiv.remove();
+                if (!aiMessageEl) {
+                    const res = addMessageToChat('ai', '');
+                    aiMessageEl = res.el;
+                    aiMessageId = res.id;
+                }
+                const analysis = event.analysis || {};
+                const finalText = analysis.conversation_response || streamedText || 'Sorry, I received an invalid response.';
+                const textEl = document.getElementById(aiMessageId);
+                if (textEl) textEl.textContent = finalText;
+                window._lastAiMessage = finalText;
+
+                const btn = aiMessageEl.querySelector('button[onclick*="translateChatMessage"]');
+                if (btn) {
+                    btn.setAttribute('data-text', finalText.replace(/"/g, '&quot;').replace(/'/g, '&#39;'));
+                }
+
+                const autoTranslate = document.getElementById('auto-translate').checked;
+                if (autoTranslate && btn) {
+                    setTimeout(() => btn.click(), 300);
+                }
+
+                setTimeout(() => showCorrections(analysis), 500);
+            },
+            error: (err) => {
+                if (typingDiv.parentNode) typingDiv.remove();
+                if (!aiMessageEl) {
+                    const res = addMessageToChat('ai', '');
+                    aiMessageEl = res.el;
+                    aiMessageId = res.id;
+                }
+                const textEl = document.getElementById(aiMessageId);
+                if (textEl) {
+                    textEl.textContent = 'Sorry, there was an error connecting to the AI service. Please try again. (' + err.message + ')';
+                }
+            }
+        });
     } catch (error) {
         console.error('Error:', error);
-        typingDiv.innerHTML = `
-            <div class="flex items-center mb-3">
-                <div class="font-bold text-red-800 text-sm uppercase tracking-wide">❌ Error</div>
-            </div>
-            <div class="text-red-600">Sorry, there was an error connecting to the AI service. Please try again. (${error.message})</div>
-        `;
+        if (typingDiv.parentNode) typingDiv.remove();
+        const res = addMessageToChat('ai', '');
+        const textEl = document.getElementById(res.id);
+        if (textEl) {
+            textEl.textContent = 'Sorry, there was an error connecting to the AI service. Please try again. (' + error.message + ')';
+        }
     }
 }
 
 function addMessageToChat(sender, message) {
     const messageDiv = document.createElement('div');
     messageDiv.className = sender === 'user' 
-        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 rounded-lg ml-8 animate-slide-up shadow-sm' 
-        : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
+        ? 'bg-green-50  border border-green-200 p-4 rounded-lg ml-8 animate-slide-up shadow-sm' 
+        : 'bg-blue-50  border border-blue-200 p-4 rounded-lg mr-8 animate-slide-up shadow-sm';
     
-    const senderLabel = sender === 'user' ? '👤 You' : '🤖 AI Tutor';
+    const senderLabel = sender === 'user' ? ' You' : ' AI Tutor';
     const senderColor = sender === 'user' ? 'text-green-800' : 'text-blue-800';
     
     // Generate unique ID for this message
@@ -227,14 +236,14 @@ function addMessageToChat(sender, message) {
                     <button onclick="translateChatMessage('${messageId}', this)" 
                             class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition flex items-center gap-1"
                             data-text="${message.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
-                        <span class="text-sm">🌐</span> ES
+                        <span class="text-sm"></span> ES
                     </button>
                 ` : ''}
                 ${sender === 'user' ? `
                     <button onclick="translateChatMessage('${messageId}', this)" 
                             class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full hover:bg-green-200 transition flex items-center gap-1"
                             data-text="${message.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
-                        <span class="text-sm">🌐</span> EN→ES
+                        <span class="text-sm"></span> EN→ES
                     </button>
                 ` : ''}
             </div>
@@ -248,7 +257,7 @@ function addMessageToChat(sender, message) {
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
-    return messageDiv;
+    return { el: messageDiv, id: messageId };
 }
 
 function showCorrections(data) {
@@ -264,13 +273,13 @@ function showCorrections(data) {
         content += `
             <div class="mb-6">
                 <div class="flex items-center mb-3">
-                    <span class="text-2xl mr-2">✏️</span>
+                    <span class="text-2xl mr-2"></span>
                     <h4 class="text-lg font-bold text-red-700">Grammar & Style Corrections</h4>
                 </div>
         `;
         data.corrections.forEach((correction, index) => {
             content += `
-                <div class="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 p-4 rounded-r-lg mb-3 shadow-sm">
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-3 shadow-sm">
                     <div class="mb-2">
                         <div class="flex flex-wrap items-center gap-2 mb-2">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-200 text-red-800">
@@ -293,10 +302,10 @@ function showCorrections(data) {
                     </div>
                     <div class="bg-white p-3 rounded border border-gray-200 mt-2">
                         <div class="flex items-center justify-between mb-2">
-                            <div class="text-sm text-gray-600">💡 Why this is better:</div>
-                            <button onclick="translateText('explanation-${index}', '${correction.explanation.replace(/'/g, "\\'")}', 'en', 'es')" 
+                            <div class="text-sm text-gray-600"> Why this is better:</div>
+                            <button onclick="translateText('explanation-${index}', 'en', 'es')" 
                                     class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full hover:bg-blue-200 transition">
-                                🌐 Traducir
+                                 Traducir
                             </button>
                         </div>
                         <div class="text-gray-800" id="explanation-${index}">${correction.explanation}</div>
@@ -313,22 +322,22 @@ function showCorrections(data) {
         content += `
             <div class="mb-6">
                 <div class="flex items-center mb-3">
-                    <span class="text-2xl mr-2">📚</span>
+                    <span class="text-2xl mr-2"></span>
                     <h4 class="text-lg font-bold text-blue-700">New Technical Vocabulary</h4>
                 </div>
         `;
         data.new_vocabulary.forEach((vocab, index) => {
             content += `
-                <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 p-4 rounded-r-lg mb-3 shadow-sm">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-3 shadow-sm">
                     <div class="flex items-start justify-between mb-2">
                         <div class="text-xl font-bold text-blue-800">${vocab.word}</div>
                         <div class="flex gap-2">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-200 text-blue-800">
                                 New Word
                             </span>
-                            <button onclick="translateText('vocab-def-${index}', '${vocab.definition.replace(/'/g, "\\'")}', 'en', 'es')" 
+                            <button onclick="translateText('vocab-def-${index}', 'en', 'es')" 
                                     class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full hover:bg-green-200 transition">
-                                🌐 ES
+                                 ES
                             </button>
                         </div>
                     </div>
@@ -337,12 +346,12 @@ function showCorrections(data) {
                         <div class="text-gray-800" id="vocab-def-${index}">${vocab.definition}</div>
                         <div class="text-green-600 text-sm mt-2 hidden italic border-t border-gray-200 pt-2" id="vocab-def-${index}-es"></div>
                     </div>
-                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 rounded border border-indigo-200">
+                    <div class="bg-indigo-50 p-3 rounded border border-indigo-200">
                         <div class="flex items-center justify-between mb-1">
-                            <div class="text-sm text-gray-600">💼 Professional Example:</div>
-                            <button onclick="translateText('vocab-ex-${index}', '${vocab.example.replace(/'/g, "\\'")}', 'en', 'es')" 
+                            <div class="text-sm text-gray-600"> Professional Example:</div>
+                            <button onclick="translateText('vocab-ex-${index}', 'en', 'es')" 
                                     class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full hover:bg-purple-200 transition">
-                                🌐 ES
+                                 ES
                             </button>
                         </div>
                         <div class="text-indigo-700 italic" id="vocab-ex-${index}">"${vocab.example}"</div>
@@ -359,16 +368,16 @@ function showCorrections(data) {
         content += `
             <div class="mb-6">
                 <div class="flex items-center mb-3">
-                    <span class="text-2xl mr-2">💡</span>
+                    <span class="text-2xl mr-2"></span>
                     <h4 class="text-lg font-bold text-yellow-700">Professional Communication Tips</h4>
                 </div>
-                <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 p-4 rounded-r-lg shadow-sm">
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg shadow-sm">
                     <div class="bg-white p-4 rounded border border-yellow-200">
                         <div class="flex items-center justify-between mb-2">
-                            <div class="text-sm text-gray-600">💡 Suggestion:</div>
-                            <button onclick="translateText('suggestions', '${data.suggestions.replace(/'/g, "\\'")}', 'en', 'es')" 
+                            <div class="text-sm text-gray-600"> Suggestion:</div>
+                            <button onclick="translateText('suggestions', 'en', 'es')" 
                                     class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full hover:bg-yellow-200 transition">
-                                🌐 Traducir
+                                 Traducir
                             </button>
                         </div>
                         <div class="text-gray-800 leading-relaxed" id="suggestions">${data.suggestions}</div>
@@ -387,8 +396,10 @@ function showCorrections(data) {
 }
 
 // Enhanced translation function with better error handling and caching
-async function translateText(elementId, text, fromLang, toLang) {
+async function translateText(elementId, fromLang, toLang) {
     const button = event.target;
+    const sourceEl = document.getElementById(elementId);
+    const text = sourceEl ? sourceEl.textContent.trim() : '';
     const originalText = button.textContent;
     
     // Check cache first
@@ -400,7 +411,7 @@ async function translateText(elementId, text, fromLang, toLang) {
     }
     
     // Show loading state
-    button.textContent = '🔄 Traduciendo...';
+    button.textContent = ' Traduciendo...';
     button.disabled = true;
     
     try {
@@ -420,7 +431,7 @@ async function translateText(elementId, text, fromLang, toLang) {
         const fallbackTranslation = getFallbackTranslation(text, fromLang, toLang);
         showTranslation(elementId, toLang, fallbackTranslation + ' (traducción básica)', button);
         
-        button.textContent = '⚠️ Traducción básica';
+        button.textContent = ' Traducción básica';
     }
     
     button.disabled = false;
@@ -549,68 +560,104 @@ function getFallbackTranslation(text, fromLang, toLang) {
 function showTranslation(elementId, toLang, translatedText, button) {
     const translationElement = document.getElementById(`${elementId}-${toLang}`);
     if (translationElement) {
-        translationElement.innerHTML = `🇪🇸 ${translatedText}`;
+        translationElement.innerHTML = ` ${translatedText}`;
         translationElement.classList.remove('hidden');
         
         // Update button
-        button.textContent = '🌐 Ocultar';
+        button.textContent = ' Ocultar';
         button.onclick = () => toggleTranslation(elementId, toLang, button);
     }
 }
 
+// AI-suggested reply + translation
+async function suggestReply() {
+    const panel = document.getElementById('suggestion-panel');
+    const enEl = document.getElementById('suggestion-en');
+    const esEl = document.getElementById('suggestion-es');
+    const btn = document.getElementById('suggest-btn');
+    if (!panel) return;
+
+    panel.classList.remove('hidden');
+    enEl.textContent = 'Generando una sugerencia…';
+    esEl.textContent = '';
+    window._lastSuggestion = '';
+    if (btn) btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/chat/suggest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario: scenario, context: window._lastAiMessage || '' })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        window._lastSuggestion = data.suggestion_en || '';
+        enEl.textContent = data.suggestion_en || '';
+        esEl.textContent = data.suggestion_es || '';
+    } catch (e) {
+        console.error('Suggestion error:', e);
+        enEl.textContent = 'No se pudo generar la sugerencia. Inténtalo de nuevo.';
+        esEl.textContent = '';
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function useSuggestion() {
+    const input = document.getElementById('message-input');
+    if (input && window._lastSuggestion) {
+        input.value = window._lastSuggestion;
+        input.focus();
+    }
+    const panel = document.getElementById('suggestion-panel');
+    if (panel) panel.classList.add('hidden');
+}
+
 // Enhanced translation function for chat messages
 async function translateChatMessage(messageId, button) {
-    const text = button.getAttribute('data-text');
+    const sourceEl = document.getElementById(messageId);
+    const text = sourceEl ? sourceEl.textContent.trim() : (button.getAttribute('data-text') || '');
     const translationElement = document.getElementById(`${messageId}-es`);
-    
+
+    if (!translationElement) return;
+
     // Check if already translated
     if (!translationElement.classList.contains('hidden')) {
-        // Toggle hide/show
         translationElement.classList.add('hidden');
-        button.innerHTML = '<span class="text-sm">🌐</span> ES';
+        button.innerHTML = '<i data-lucide="languages" class="w-4 h-4"></i> ES';
+        if (window.lucide) lucide.createIcons();
         return;
     }
-    
+
     // Check cache first
     const cacheKey = `${text}-en-es`;
     if (translationCache.has(cacheKey)) {
         const cachedTranslation = translationCache.get(cacheKey);
-        translationElement.innerHTML = `🇪🇸 ${cachedTranslation}`;
+        translationElement.innerHTML = cachedTranslation;
         translationElement.classList.remove('hidden');
-        button.innerHTML = '<span class="text-sm">🌐</span> Ocultar';
+        button.innerHTML = '<i data-lucide="languages" class="w-4 h-4"></i> Ocultar';
+        if (window.lucide) lucide.createIcons();
         return;
     }
-    
-    // Show loading state
-    const originalContent = button.innerHTML;
-    button.innerHTML = '🔄 Traduciendo...';
+
     button.disabled = true;
-    
+
     try {
         const translatedText = await tryMultipleServices(text, 'en', 'es');
-        
-        // Cache the result
         translationCache.set(cacheKey, translatedText);
-        
-        // Show translation
-        translationElement.innerHTML = `🇪🇸 ${translatedText}`;
+        translationElement.innerHTML = translatedText;
         translationElement.classList.remove('hidden');
-        
-        // Update button
-        button.innerHTML = '<span class="text-sm">🌐</span> Ocultar';
-        
+        button.innerHTML = '<i data-lucide="languages" class="w-4 h-4"></i> Ocultar';
+        if (window.lucide) lucide.createIcons();
     } catch (error) {
         console.error('Chat translation error:', error);
-        
-        // Use enhanced fallback
         const fallbackTranslation = getFallbackTranslation(text, 'en', 'es');
-        
-        translationElement.innerHTML = `🇪🇸 ${fallbackTranslation} <span class="text-xs text-gray-500">(traducción básica)</span>`;
+        translationElement.innerHTML = fallbackTranslation + ' <span class="text-xs text-gray-500">(traducción básica)</span>';
         translationElement.classList.remove('hidden');
-        
-        button.innerHTML = '⚠️ Básica';
+        button.innerHTML = '<i data-lucide="languages" class="w-4 h-4"></i> Básica';
+        if (window.lucide) lucide.createIcons();
     }
-    
+
     button.disabled = false;
 }
 
@@ -618,11 +665,11 @@ function toggleTranslation(elementId, toLang, button) {
     const translationElement = document.getElementById(`${elementId}-${toLang}`);
     if (translationElement.classList.contains('hidden')) {
         translationElement.classList.remove('hidden');
-        button.textContent = '🌐 Ocultar';
+        button.textContent = ' Ocultar';
     } else {
         translationElement.classList.add('hidden');
-        button.textContent = '🌐 Traducir';
-        button.onclick = () => translateText(elementId, translationElement.textContent.replace('🇪🇸 ', ''), 'es', 'en');
+        button.textContent = ' Traducir';
+        button.onclick = () => translateText(elementId, translationElement.textContent.replace(' ', ''), 'es', 'en');
     }
 }
 

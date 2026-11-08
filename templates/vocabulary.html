@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div>
-    <h2 class="text-3xl font-bold text-gray-800 mb-6">📚 Your Technical Vocabulary</h2>
+    <h2 class="text-3xl font-bold text-gray-800 mb-6"><i data-lucide="book-open"></i> <span data-i18n="vocab.title">Your Technical Vocabulary</span></h2>
     
     {% if vocabulary %}
     <div class="bg-white rounded-lg shadow-lg">
@@ -12,32 +12,30 @@
                     <span class="text-gray-600">{{ vocabulary|length }} total words</span>
                     <button onclick="toggleAllTranslations()" 
                             id="toggle-all-btn"
-                            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
-                        🌐 Translate All
+                            class="inline-flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
+                        <i data-lucide="languages"></i> Translate All
                     </button>
                 </div>
             </div>
         </div>
         
         <div class="divide-y">
-            {% for word, definition, example, times_encountered in vocabulary %}
+            {% for item in vocabulary %}
             <div class="p-6 hover:bg-gray-50 transition-colors">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="flex items-center space-x-3 mb-3">
-                            <h4 class="text-2xl font-bold text-blue-600">{{ word }}</h4>
+                            <h4 class="text-2xl font-bold text-blue-600">{{ item.word }}</h4>
                             <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                                Seen {{ times_encountered }} time{% if times_encountered != 1 %}s{% endif %}
+                                Seen {{ item.times_encountered }} time{% if item.times_encountered != 1 %}s{% endif %}
                             </span>
                             <div class="flex space-x-2">
-                                <button onclick="translateVocabDefinition('{{ loop.index0 }}', '{{ definition.replace("'", "\\'") }}')" 
-                                        class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition">
-                                    🌐 Definition
+                                 <button onclick="translateVocabDefinition('{{ loop.index0 }}')" class="inline-flex items-center gap-1.5 text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition">
+                                    <i data-lucide="languages"></i> Definition
                                 </button>
-                                {% if example %}
-                                <button onclick="translateVocabExample('{{ loop.index0 }}', '{{ example.replace("'", "\\'") }}')" 
-                                        class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition">
-                                    🌐 Example
+                                {% if item.example %}
+                                 <button onclick="translateVocabExample('{{ loop.index0 }}')" class="inline-flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition">
+                                    <i data-lucide="languages"></i> Example
                                 </button>
                                 {% endif %}
                             </div>
@@ -46,8 +44,8 @@
                         <!-- Definition Section -->
                         <div class="mb-4">
                             <div class="bg-gray-100 p-4 rounded-lg">
-                                <div class="text-sm text-gray-600 mb-2 font-medium">📖 Definition:</div>
-                                <div class="text-gray-800 leading-relaxed" id="definition-{{ loop.index0 }}">{{ definition }}</div>
+                                <div class="text-sm text-gray-600 mb-2 font-medium"><i data-lucide="book"></i> Definition:</div>
+                                <div class="text-gray-800 leading-relaxed" id="definition-{{ loop.index0 }}">{{ item.definition }}</div>
                                 <div class="text-green-600 text-sm mt-3 hidden italic" id="definition-{{ loop.index0 }}-es">
                                     <!-- Spanish translation will appear here -->
                                 </div>
@@ -55,11 +53,11 @@
                         </div>
                         
                         <!-- Example Section -->
-                        {% if example %}
-                        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
-                            <div class="text-sm text-gray-600 mb-2 font-medium">💼 Professional Example:</div>
+                        {% if item.example %}
+                        <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                            <div class="text-sm text-gray-600 mb-2 font-medium"><i data-lucide="briefcase"></i> Professional Example:</div>
                             <div class="text-indigo-700 italic leading-relaxed" id="example-{{ loop.index0 }}">
-                                "{{ example }}"
+                                "{{ item.example }}"
                             </div>
                             <div class="text-purple-600 text-sm mt-3 hidden italic" id="example-{{ loop.index0 }}-es">
                                 <!-- Spanish translation will appear here -->
@@ -78,7 +76,7 @@
     </div>
     {% else %}
     <div class="bg-white rounded-lg shadow-lg p-12 text-center">
-        <div class="text-6xl mb-4">📖</div>
+        <div class="text-6xl mb-4"><i data-lucide="book"></i></div>
         <h3 class="text-xl font-semibold text-gray-800 mb-2">No vocabulary yet</h3>
         <p class="text-gray-600 mb-6">Start practicing to build your technical vocabulary!</p>
         <a href="/" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">
@@ -92,22 +90,24 @@
 let allTranslated = false;
 
 // Translation function for vocabulary definitions
-async function translateVocabDefinition(index, text) {
-    await translateVocabText(`definition-${index}`, text, 'definition');
+async function translateVocabDefinition(index) {
+    await translateVocabText(`definition-${index}`, 'definition');
 }
 
 // Translation function for vocabulary examples  
-async function translateVocabExample(index, text) {
-    await translateVocabText(`example-${index}`, text, 'example');
+async function translateVocabExample(index) {
+    await translateVocabText(`example-${index}`, 'example');
 }
 
 // Generic translation function for vocabulary
-async function translateVocabText(elementId, text, type) {
+async function translateVocabText(elementId, type) {
     const button = event.target;
+    const sourceEl = document.getElementById(elementId);
+    const text = sourceEl ? sourceEl.textContent.trim() : '';
     const originalText = button.textContent;
     
     // Show loading state
-    button.textContent = '🔄 Traduciendo...';
+    button.textContent = ' Traduciendo...';
     button.disabled = true;
     
     try {
@@ -121,14 +121,14 @@ async function translateVocabText(elementId, text, type) {
             // Show translation
             const translationElement = document.getElementById(`${elementId}-es`);
             if (translationElement) {
-                const prefix = type === 'definition' ? '🇪🇸 Definición: ' : '🇪🇸 Ejemplo: ';
+                const prefix = type === 'definition' ? ' Definición: ' : ' Ejemplo: ';
                 translationElement.textContent = `${prefix}${translatedText}`;
                 translationElement.classList.remove('hidden');
                 
                 // Update button
-                button.textContent = '✅ Traducido';
+                button.textContent = ' Traducido';
                 setTimeout(() => {
-                    button.textContent = '🌐 Ocultar';
+                    button.textContent = ' Ocultar';
                     button.onclick = () => toggleVocabTranslation(elementId, button, originalText);
                 }, 1000);
             }
@@ -194,12 +194,12 @@ async function translateVocabText(elementId, text, type) {
         
         const translationElement = document.getElementById(`${elementId}-es`);
         if (translationElement) {
-            const prefix = type === 'definition' ? '🇪🇸 Definición (básica): ' : '🇪🇸 Ejemplo (básico): ';
+            const prefix = type === 'definition' ? ' Definición (básica): ' : ' Ejemplo (básico): ';
             translationElement.textContent = `${prefix}${fallbackTranslation}`;
             translationElement.classList.remove('hidden');
         }
         
-        button.textContent = '⚠️ Traducción básica';
+        button.textContent = ' Traducción básica';
     }
     
     button.disabled = false;
@@ -209,7 +209,7 @@ function toggleVocabTranslation(elementId, button, originalText) {
     const translationElement = document.getElementById(`${elementId}-es`);
     if (translationElement.classList.contains('hidden')) {
         translationElement.classList.remove('hidden');
-        button.textContent = '🌐 Ocultar';
+        button.textContent = ' Ocultar';
     } else {
         translationElement.classList.add('hidden');
         button.textContent = originalText;
@@ -221,7 +221,7 @@ async function toggleAllTranslations() {
     const toggleBtn = document.getElementById('toggle-all-btn');
     
     if (!allTranslated) {
-        toggleBtn.textContent = '🔄 Traduciendo todo...';
+        toggleBtn.textContent = ' Traduciendo todo...';
         toggleBtn.disabled = true;
         
         // Get all definition and example elements
@@ -244,14 +244,14 @@ async function toggleAllTranslations() {
             await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting
         }
         
-        toggleBtn.textContent = '🌐 Hide All Translations';
+        toggleBtn.textContent = ' Hide All Translations';
         allTranslated = true;
     } else {
         // Hide all translations
         const allTranslations = document.querySelectorAll('[id$="-es"]');
         allTranslations.forEach(trans => trans.classList.add('hidden'));
         
-        toggleBtn.textContent = '🌐 Translate All';
+        toggleBtn.textContent = ' Translate All';
         allTranslated = false;
     }
     
@@ -269,7 +269,7 @@ async function translateVocabTextSilent(elementId, text, type) {
             const translationElement = document.getElementById(`${elementId}-es`);
             
             if (translationElement) {
-                const prefix = type === 'definition' ? '🇪🇸 Definición: ' : '🇪🇸 Ejemplo: ';
+                const prefix = type === 'definition' ? ' Definición: ' : ' Ejemplo: ';
                 translationElement.textContent = `${prefix}${translatedText}`;
                 translationElement.classList.remove('hidden');
             }
